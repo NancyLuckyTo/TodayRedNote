@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import logger from 'morgan'
 import authRouter from './routes/auth'
 import uploadRouter from './routes/upload'
+import postsRouter from './routes/posts'
 
 const app = express()
 
@@ -19,6 +20,7 @@ app.use(express.static(path.resolve(__dirname, '../public')))
 
 app.use('/api/auth', authRouter)
 app.use('/api/upload', uploadRouter)
+app.use('/api/posts', postsRouter)
 
 app.get('/', (_req, res) => {
   res.json({ ok: true })
