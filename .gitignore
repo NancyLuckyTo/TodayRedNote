@@ -13,6 +13,7 @@ dist-ssr
 *.local
 
 # Editor directories and files
+.windsurf
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,5 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.env
 
 *.md
