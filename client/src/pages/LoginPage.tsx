@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Card,
@@ -17,6 +18,8 @@ import { Button } from '@/components/ui/button'
 
 const LoginPage = () => {
   const navigate = useNavigate()
+  const setToken = useAuthStore(s => s.setToken)
+  const setUser = useAuthStore(s => s.setUser)
 
   const [loading, setLoading] = useState(false)
 
@@ -45,6 +48,8 @@ const LoginPage = () => {
               'profile',
               JSON.stringify({ ...profile.data, token })
             )
+            setToken(token)
+            setUser(profile.data.user)
           })
           .catch(() => undefined)
         navigate('/')
@@ -82,6 +87,8 @@ const LoginPage = () => {
               'profile',
               JSON.stringify({ ...profile.data, token })
             )
+            setToken(token)
+            setUser(profile.data.user)
           })
           .catch(() => undefined)
         navigate('/')

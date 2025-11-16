@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useAuthStore } from '@/store/auth'
 
 const BottomNav = () => {
   const location = useLocation()
@@ -9,8 +10,7 @@ const BottomNav = () => {
     { path: '/profile', label: '我' },
   ]
 
-  const isLoggedIn =
-    typeof window !== 'undefined' && Boolean(localStorage.getItem('token'))
+  const isLoggedIn = useAuthStore(s => s.isAuthenticated)
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white">
