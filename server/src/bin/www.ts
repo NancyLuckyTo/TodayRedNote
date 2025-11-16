@@ -2,7 +2,7 @@ import 'dotenv/config'
 import http from 'http'
 import debugFactory from 'debug'
 import app from '../app'
-import connectDB from '../model/connection'
+import connectDB from '../models/connection'
 
 const debug = debugFactory('server:server')
 
