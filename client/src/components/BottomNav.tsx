@@ -5,19 +5,32 @@ const BottomNav = () => {
 
   const navItems = [
     { path: '/', label: '首页' },
-    { path: '/publish', label: '发布' },
-    { path: '/me', label: '我' },
+    { path: '/createPost', label: '发布' },
+    { path: '/profile', label: '我' },
   ]
+
+  const isLoggedIn =
+    typeof window !== 'undefined' && Boolean(localStorage.getItem('token'))
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white">
       <div className="flex justify-around items-center h-16 px-4">
         {navItems.map(item => {
-          const isActive = location.pathname === item.path
+          const targetPath =
+            item.path === '/profile'
+              ? isLoggedIn
+                ? '/profile'
+                : '/login'
+              : item.path
+          const isActive =
+            item.path === '/profile'
+              ? location.pathname === '/profile' ||
+                location.pathname === '/login'
+              : location.pathname === item.path
           return (
             <Link
               key={item.path}
-              to={item.path}
+              to={targetPath}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
                 isActive
                   ? 'text-gray-700 font-bold'
