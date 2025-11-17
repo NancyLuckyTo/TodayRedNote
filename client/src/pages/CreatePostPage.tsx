@@ -21,7 +21,6 @@ import {
 
 // 定义表单验证规则
 const postSchema = z.object({
-  title: z.string().min(1, '请输入标题').max(50, '标题不能超过50字'),
   body: z.string().min(1, '请输入内容').max(5000, '内容不能超过5000字'),
   tags: z.string().optional(),
 })
@@ -38,7 +37,6 @@ const CreatePostPage = () => {
     resolver: zodResolver(postSchema), // 校验
     // 初始值初始化
     defaultValues: {
-      title: '',
       body: '',
       tags: '',
     },
@@ -89,7 +87,6 @@ const CreatePostPage = () => {
 
       // 创建帖子，将清洗后的数据发给后端
       const postRes = await api.post('/posts', {
-        title: data.title,
         body: data.body,
         coverImage: coverImageUrl || undefined,
         tags: tagsArray,
@@ -200,25 +197,6 @@ const CreatePostPage = () => {
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-4"
           >
-            {/* 标题 */}
-            <FormField
-              control={form.control} // 传入 RHF 的控制权
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormControl>
-                    <Input
-                      placeholder="添加标题"
-                      {...field}
-                      disabled={isPending}
-                      className="border-none text-lg"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             {/* 正文 */}
             <FormField
               control={form.control}

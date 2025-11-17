@@ -10,11 +10,11 @@ const router = Router()
 router.post('/', auth, async (req: AuthRequest, res, next) => {
   try {
     // 获取输入
-    const { title, body, coverImage, tags } = req.body ?? {}
+    const { body, coverImage, tags } = req.body ?? {}
 
     // 验证输入
-    if (!title || !String(title).trim() || !body || !String(body).trim()) {
-      return res.status(400).json({ message: 'title and body are required' })
+    if (!body || !String(body).trim()) {
+      return res.status(400).json({ message: 'Body are required' })
     }
 
     // 身份验证
@@ -23,7 +23,6 @@ router.post('/', auth, async (req: AuthRequest, res, next) => {
 
     // 构建数据库载荷
     const payload: any = {
-      title: String(title).trim(),
       body: String(body).trim(),
       author,
     }
@@ -62,9 +61,8 @@ router.put('/:id', auth, async (req: AuthRequest, res, next) => {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
-    const { title, body, coverImage, tags } = req.body ?? {}
+    const { body, coverImage, tags } = req.body ?? {}
     const update: any = {}
-    if (typeof title === 'string') update.title = title.trim()
     if (typeof body === 'string') update.body = body.trim()
     if (typeof coverImage === 'string') update.coverImage = coverImage
     if (Array.isArray(tags)) update.tags = tags.map((t: any) => String(t))
