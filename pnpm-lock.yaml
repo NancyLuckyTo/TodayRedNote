@@ -131,6 +131,9 @@ importers:
 
   server:
     dependencies:
+      '@TRN/types':
+        specifier: workspace:*
+        version: link:../packages/types
       ali-oss:
         specifier: ^6.23.0
         version: 6.23.0

@@ -8,6 +8,7 @@
     "start": "node dist/bin/www.ts"
   },
   "dependencies": {
+    "@TRN/types": "workspace:*",
     "ali-oss": "^6.23.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "~1.4.4",

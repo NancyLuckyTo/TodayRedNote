@@ -3,6 +3,8 @@ import { URL } from 'url'
 import auth, { AuthRequest } from '../middleware/auth'
 import Post from '../models/postModel'
 import getOssClient from '../services/storageService'
+import type { ImageRatioType } from '@TRN/types'
+import { IMAGE_RATIO } from '@TRN/types'
 
 const router = Router()
 
@@ -149,6 +151,106 @@ router.delete('/:id', auth, async (req: AuthRequest, res, next) => {
     // 把这条帖子记录从 MongoDB 中彻底删除
     await found.deleteOne()
     return res.status(204).end()
+  } catch (err) {
+    next(err)
+  }
+})
+
+// 获取帖子列表
+router.get('/', async (req, res, next) => {
+  try {
+    // 限制最多一次获取 50 条
+    const limit = Math.min(
+      parseInt(String(req.query.limit as string)) || 10,
+      50
+    )
+    const cursor = req.query.cursor as string | undefined
+
+    // 构建查询条件
+    let query: any = {}
+
+    // 解码游标
+    if (cursor) {
+      try {
+        // 游标结构: { createdAt: string, _id: string }
+        const decoded = JSON.parse(
+          Buffer.from(cursor, 'base64').toString('utf-8')
+        )
+        const cursorTime = new Date(decoded.createdAt)
+        const cursorId = decoded._id
+
+        // 查找 (发布时间 < 游标时间) 或者 (时间相同 但 ID 更小) 的记录
+        query = {
+          $or: [
+            { createdAt: { $lt: cursorTime } },
+            { createdAt: cursorTime, _id: { $lt: cursorId } },
+          ],
+        }
+      } catch (err) {
+        // 如果游标解析失败则忽略它，重置为第一页
+        query = {}
+      }
+    }
+
+    // 查询数据库，limit + 1 条是为了判断是否有下一页
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .populate('author', 'username avatar')
+      .lean()
+
+    // 判断是否有下一页
+    const hasNextPage = posts.length > limit
+    if (hasNextPage) {
+      posts.pop()
+    }
+
+    // 计算封面图的 ratioType
+    const formattedPosts = posts.map((post: any) => {
+      let ratioType: ImageRatioType = IMAGE_RATIO.SQUARE
+      const hasImages = Array.isArray(post.images) && post.images.length > 0
+
+      if (hasImages) {
+        const firstImage = post.images[0]
+        if (
+          typeof firstImage.width === 'number' &&
+          typeof firstImage.height === 'number' &&
+          firstImage.height !== 0
+        ) {
+          const ratio = firstImage.width / firstImage.height
+          if (ratio > 1.2) ratioType = IMAGE_RATIO.LANDSCAPE
+          else if (ratio < 0.8) ratioType = IMAGE_RATIO.PORTRAIT
+          else ratioType = IMAGE_RATIO.SQUARE
+        }
+      }
+
+      return {
+        ...post,
+        ratioType,
+        isTextOnly: !hasImages,
+      }
+    })
+
+    // 构建下一页游标
+    let nextCursor = null
+    if (hasNextPage && formattedPosts.length > 0) {
+      const lastPost = formattedPosts[formattedPosts.length - 1]
+      // 将最后一条数据的关键排序字段编码为 Base64（安全性）
+      const cursorPayload = JSON.stringify({
+        createdAt: lastPost.createdAt,
+        _id: lastPost._id,
+      })
+      nextCursor = Buffer.from(cursorPayload).toString('base64')
+    }
+
+    return res.json({
+      posts: formattedPosts,
+      pagination: {
+        nextCursor, // 前端翻页时需携带
+        hasNextPage,
+        limit,
+      },
+    })
   } catch (err) {
     next(err)
   }
