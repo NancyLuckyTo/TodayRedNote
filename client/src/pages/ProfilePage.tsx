@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth'
 import { Settings, Plus, Info, Search, Lock, LogOut } from 'lucide-react'
-import avatarImg from '@/assets/images/avatar.png'
+import defaultAvatar from '@/assets/images/avatar.png'
 
 const ProfilePage = () => {
   const navigate = useNavigate()
-  const user = useAuthStore(s => s.user)
   const logout = useAuthStore(s => s.logout)
 
   const onLogout = () => {
@@ -29,7 +28,7 @@ const ProfilePage = () => {
           <div className="relative">
             <div className="w-24 h-24 rounded-full overflow-hidden bg-gray-400">
               <img
-                src={avatarImg}
+                src={defaultAvatar}
                 alt="avatar"
                 className="w-full h-full object-cover"
               />
@@ -49,7 +48,7 @@ const ProfilePage = () => {
               </Button>
             </div>
             <div className="flex items-center gap-2 text-gray-200 text-sm mb-1.5">
-              <span>今日号：18923080116</span>
+              <span>今日号: 18923080116</span>
             </div>
             <div className="flex items-center gap-1 text-gray-200 text-sm">
               <span>IP 属地: 湖北</span>

@@ -13,8 +13,8 @@ const BottomNav = () => {
   const isLoggedIn = useAuthStore(s => s.isAuthenticated)
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white">
-      <div className="flex justify-around items-center h-16 px-4">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white z-10">
+      <div className="flex justify-around items-center py-2 px-4">
         {navItems.map(item => {
           const targetPath =
             item.path === '/profile'
@@ -34,10 +34,10 @@ const BottomNav = () => {
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors ${
                 isActive
                   ? 'text-gray-700 font-bold'
-                  : 'text-gray-400 hover:text-gray-700'
+                  : 'text-gray-400 text-sm hover:text-gray-700'
               }`}
             >
-              <span className="text-lg">{item.label}</span>
+              <span>{item.label}</span>
             </Link>
           )
         })}
