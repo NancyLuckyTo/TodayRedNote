@@ -49,3 +49,14 @@ export const calculatePostHeight = (post: IPost, columnWidth: number) => {
 export function getAspectRatio(coverRatio: ImageRatioType) {
   return IMAGE_RATIO_META[coverRatio]?.aspectRatio || '1 / 1'
 }
+
+export const normalizePost = (post: IPost): IPost => ({
+  ...post,
+  images:
+    post.images
+      ?.map((img: string | { url?: string }) =>
+        typeof img === 'string' ? img : img?.url
+      )
+      .filter((url): url is string => Boolean(url)) || [],
+  coverRatio: post.coverRatio ?? IMAGE_RATIO.SQUARE,
+})

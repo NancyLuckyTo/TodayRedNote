@@ -1,0 +1,96 @@
+import { Share, MessageSquare, Heart, Star } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import defaultAvatar from '@/assets/images/avatar.png'
+import type { IPost } from '@TRN/types'
+
+interface PostDetailItemProps {
+  post: IPost
+}
+
+export function PostDetailItem({ post }: PostDetailItemProps) {
+  const { author, body, images, likesCount = 0, createdAt } = post
+
+  return (
+    <div className="flex flex-col bg-background pb-4 mb-4 last:mb-0">
+      {/* 作者信息 */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <img
+            src={author.avatar || defaultAvatar}
+            alt={author.username}
+            className="h-10 w-10 rounded-full object-cover border border-border"
+          />
+          <div className="flex flex-col">
+            <span className="text-sm font-medium">{author.username}</span>
+            {/* 发布时间 */}
+            <span className="text-xs text-muted-foreground">
+              {new Intl.DateTimeFormat('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+              })
+                .format(new Date(createdAt))
+                .replace(/\//g, '-')}
+            </span>
+          </div>
+        </div>
+        {/* 关注按钮 */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 rounded-full px-4 text-xs font-medium text-primary border-red-500"
+        >
+          关注
+        </Button>
+      </div>
+
+      {/* 笔记正文 */}
+      <div className="px-4 py-2">
+        {/* 保留文本中的换行符和空格 */}
+        <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
+          {body}
+        </p>
+      </div>
+
+      {/* 图片展示 */}
+      {images && images.length > 0 && (
+        <div className="mt-4 flex gap-2 overflow-x-auto px-4 pb-4 scrollbar-hide snap-x">
+          {images.map((img: string, index: number) => (
+            <div
+              key={index}
+              className="relative h-48 w-auto shrink-0 overflow-hidden rounded-sm"
+            >
+              <img
+                src={img}
+                alt={`Post image ${index + 1}`}
+                className="h-full w-auto object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 分享、评论、点赞、收藏 */}
+      <div className="flex items-center justify-between py-2 text-muted-foreground">
+        <div className="flex flex-1 items-center justify-center gap-1">
+          <Share className="h-5 w-5" />
+        </div>
+
+        <div className="flex flex-1 items-center justify-center gap-1">
+          <MessageSquare className="h-5 w-5" />
+          <span className="text-xs">15</span>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center gap-1">
+          <Heart className="h-5 w-5" />
+          <span className="text-xs">{likesCount}</span>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center gap-1">
+          <Star className="h-5 w-5" />
+          <span className="text-xs">18</span>
+        </div>
+      </div>
+    </div>
+  )
+}

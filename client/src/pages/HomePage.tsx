@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { WaterfallContainer } from '../components/WaterfallContainer'
 import { PostCard } from '../components/PostCard'
 import api from '@/lib/api'
-import { IMAGE_RATIO } from '@TRN/types'
 import type { IPost } from '@TRN/types'
-import { calculatePostHeight } from '@/lib/post-utils'
+import { calculatePostHeight, normalizePost } from '@/lib/post-utils'
 import { Spinner } from '@/components/ui/spinner'
 
 type BackendPostsResponse = {
@@ -18,17 +18,6 @@ type BackendPostsResponse = {
 
 const FETCH_LIMIT = 10
 const ROOT_MARGIN_VALUE = '250px'
-
-const normalizePost = (post: IPost): IPost => ({
-  ...post,
-  images:
-    post.images
-      ?.map((img: string | { url?: string }) =>
-        typeof img === 'string' ? img : img?.url
-      )
-      .filter((url): url is string => Boolean(url)) || [],
-  coverRatio: post.coverRatio ?? IMAGE_RATIO.SQUARE,
-})
 
 const HomePage = () => {
   const [posts, setPosts] = useState<IPost[]>([]) // 笔记列表
@@ -108,12 +97,17 @@ const HomePage = () => {
     fetchPosts()
   }, [fetchPosts])
 
+  const navigate = useNavigate()
+
   /**
    * 点击卡片事件
    */
-  const handlePostClick = useCallback((postId: string) => {
-    console.log('点击了帖子:', postId)
-  }, [])
+  const handlePostClick = useCallback(
+    (postId: string) => {
+      navigate(`/post/${postId}`)
+    },
+    [navigate]
+  )
 
   /**
    * 下拉刷新
