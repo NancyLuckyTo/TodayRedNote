@@ -17,7 +17,8 @@ type BackendPostsResponse = {
 }
 
 const FETCH_LIMIT = 10
-const ROOT_MARGIN_VALUE = '250px'
+const ROOT_MARGIN_VALUE = '500px'
+const PRIORITY_LIMIT = 6
 
 const HomePage = () => {
   const [posts, setPosts] = useState<IPost[]>([]) // 笔记列表
@@ -165,13 +166,14 @@ const HomePage = () => {
       {/* 瀑布流容器 */}
       {!isEmpty && (
         <WaterfallContainer>
-          {posts.map(post => (
+          {posts.map((post, index) => (
             <PostCard
               key={post._id}
               post={post}
               onClick={() => handlePostClick(post._id)}
               // 将计算好的列宽传入，算出卡片高度，传给 WaterfallContainer 进行布局
               data-waterfall-height={calculatePostHeight(post, columnWidth)}
+              priority={index < PRIORITY_LIMIT}
             />
           ))}
         </WaterfallContainer>

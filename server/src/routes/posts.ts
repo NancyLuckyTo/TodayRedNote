@@ -4,7 +4,8 @@ import auth, { AuthRequest } from '../middleware/auth.js'
 import Post from '../models/postModel.js'
 import getOssClient from '../services/storageService.js'
 import type { ImageRatio } from '@today-red-note/types'
-import { IMAGE_RATIO } from '@today-red-note/types'
+import { IMAGE_RATIO, IMAGE_QUALITY } from '@today-red-note/types'
+import { processImageUrl } from '../utils/imageUtils.js'
 
 const RATIO_THRESHOLD = {
   // 宽高比大于 1.2 视为横图
@@ -94,7 +95,22 @@ router.get('/:id', async (req, res, next) => {
     const { id } = req.params
     const post = await Post.findById(id).populate('author', 'username')
     if (!post) return res.status(404).json({ message: 'Not found' })
-    return res.json({ post })
+
+    // 处理详情页图片
+    const hasImages = Array.isArray(post.images) && post.images.length > 0
+    const processedImages = hasImages
+      ? post.images.map((img: any) => ({
+          ...img,
+          url: processImageUrl(img.url, IMAGE_QUALITY.PREVIEW),
+        }))
+      : []
+
+    const formattedPost = {
+      ...post.toObject(),
+      images: processedImages,
+    }
+
+    return res.json({ post: formattedPost })
   } catch (err) {
     next(err)
   }
@@ -235,8 +251,17 @@ router.get('/', async (req, res, next) => {
     const formattedPosts = posts.map((post: any) => {
       const hasImages = Array.isArray(post.images) && post.images.length > 0
 
+      // 处理图片 URL，添加 OSS 压缩参数
+      const processedImages = hasImages
+        ? post.images.map((img: any) => ({
+            ...img,
+            url: processImageUrl(img.url, IMAGE_QUALITY.THUMBNAIL),
+          }))
+        : []
+
       return {
         ...post,
+        images: processedImages,
         coverRatio: post.coverRatio,
         isTextOnly: !hasImages,
       }

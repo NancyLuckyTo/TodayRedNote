@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { X, Plus } from 'lucide-react'
 import axios from 'axios'
 import api from '@/lib/api'
+import { compressImages } from '@/lib/imageUtils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -18,6 +19,7 @@ import {
   FormItem,
   FormMessage,
 } from '@/components/ui/form'
+import { IMAGE_QUALITY } from '@today-red-note/types'
 
 // 定义表单验证规则
 const postSchema = z.object({
@@ -56,11 +58,39 @@ const CreatePostPage = () => {
       let uploadedImages: { url: string; width: number; height: number }[] = []
       if (images.length > 0) {
         try {
-          // 元数据用于后端签名
+          const originalFiles = images.map(img => img.file)
+          const compressedFiles = await compressImages(
+            originalFiles,
+            IMAGE_QUALITY.PREVIEW
+          )
+
+          // 重新计算压缩后图片的尺寸
+          const compressedImagesWithDims = await Promise.all(
+            compressedFiles.map(async (compressedFile, idx) => {
+              const originalImg = images[idx]
+              // 如果原始图片尺寸已知，按比例计算压缩后的尺寸，否则重新读取压缩后图片的尺寸
+              let width = originalImg.width
+              let height = originalImg.height
+
+              if (width > 800) {
+                const ratio = 800 / width
+                width = 800
+                height = Math.round(height * ratio)
+              }
+
+              return {
+                file: compressedFile,
+                width,
+                height,
+              }
+            })
+          )
+
+          // 元数据用于后端签名（使用压缩后的文件信息）
           const reqBody = {
-            files: images.map(img => ({
-              filename: img.file.name,
-              contentType: img.file.type,
+            files: compressedImagesWithDims.map(item => ({
+              filename: item.file.name,
+              contentType: item.file.type, // webp
             })),
           }
           // 申请上传授权
@@ -71,22 +101,27 @@ const CreatePostPage = () => {
           const items: { uploadUrl: string; publicUrl: string }[] =
             batch.data.items
 
-          // 使用 Promise.all 并行上传所有图片
+          // 使用 Promise.all 并行上传所有压缩后的图片
           await Promise.all(
             items.map((it, idx) =>
-              axios.put(it.uploadUrl, images[idx].file, {
-                headers: { 'Content-Type': images[idx].file.type },
+              axios.put(it.uploadUrl, compressedImagesWithDims[idx].file, {
+                headers: {
+                  'Content-Type': compressedImagesWithDims[idx].file.type,
+                },
               })
             )
           )
 
-          // 构建已上传图片的元数据
+          // 使用压缩后的尺寸，构建已上传图片的元数据
           uploadedImages = items.map((it, idx) => ({
             url: it.publicUrl,
-            width: images[idx].width,
-            height: images[idx].height,
+            width: compressedImagesWithDims[idx].width,
+            height: compressedImagesWithDims[idx].height,
           }))
         } catch (error) {
+          if (error instanceof Error && error.message.includes('压缩')) {
+            throw error
+          }
           if (axios.isAxiosError(error)) {
             const url = error.config?.url || ''
             if (/\/upload\/request-url(s)?/.test(String(url))) {

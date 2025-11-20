@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Card } from './ui/card'
-import { Heart } from 'lucide-react'
+import { Heart, ImageOff } from 'lucide-react'
 import { IMAGE_RATIO } from '@today-red-note/types'
 import type { IPost } from '@today-red-note/types'
 import defaultAvatar from '@/assets/images/avatar.png'
@@ -9,10 +10,12 @@ interface PostCardProps {
   post: IPost
   onClick?: () => void
   'data-waterfall-height'?: number
+  priority?: boolean
 }
 
-export function PostCard({ post, onClick }: PostCardProps) {
+export function PostCard({ post, onClick, priority = false }: PostCardProps) {
   const { author, body, images, likesCount = 0 } = post
+  const [imageError, setImageError] = useState(false)
 
   const hasImages = images && images.length > 0
   const hasBody = body && body.trim().length > 0
@@ -39,13 +42,21 @@ export function PostCard({ post, onClick }: PostCardProps) {
     <Card className="overflow-hidden" onClick={onClick}>
       {/* 封面图 */}
       {hasImages && firstImage && (
-        <div className="relative w-full" style={{ aspectRatio }}>
-          <img
-            src={firstImage}
-            alt="Post cover"
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+        <div className="relative w-full bg-muted" style={{ aspectRatio }}>
+          {!imageError ? (
+            <img
+              src={firstImage}
+              alt="Post cover"
+              className="h-full w-full object-cover"
+              loading={priority ? 'eager' : 'lazy'}
+              fetchPriority={priority ? 'high' : 'auto'}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-secondary text-muted-foreground">
+              <ImageOff className="h-8 w-8" />
+            </div>
+          )}
         </div>
       )}
 
