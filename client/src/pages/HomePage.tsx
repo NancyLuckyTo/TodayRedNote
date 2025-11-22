@@ -113,10 +113,10 @@ const HomePage = () => {
   /**
    * 下拉刷新
    */
-  const handleRefresh = useCallback(() => {
-    if (isInitialLoading) return
-    fetchPosts()
-  }, [fetchPosts, isInitialLoading])
+  // const handleRefresh = useCallback(() => {
+  //   if (isInitialLoading) return
+  //   fetchPosts()
+  // }, [fetchPosts, isInitialLoading])
 
   /**
    * 加载更多
@@ -149,63 +149,66 @@ const HomePage = () => {
   }, [hasNextPage, isLoadingMore, handleLoadMore])
 
   return (
-    <div className="min-h-screen pb-10">
+    <div className="flex flex-col h-screen overflow-hidden bg-gray-100">
       {/* 顶部导航栏 */}
-      <div className="sticky top-0 z-10 bg-background border-b px-4 py-2">
+      <div className="flex-none z-10 bg-background border-b px-4 py-2">
         <div className="flex items-center justify-center">
           <h1 className="text-">发现</h1>
         </div>
       </div>
 
-      {isInitialLoading && !posts.length ? (
-        <div className="flex justify-center items-center py-10">
-          <Spinner />
-        </div>
-      ) : null}
-
-      {/* 瀑布流容器 */}
-      {!isEmpty && (
-        <WaterfallContainer>
-          {posts.map((post, index) => (
-            <PostCard
-              key={post._id}
-              post={post}
-              onClick={() => handlePostClick(post._id)}
-              // 将计算好的列宽传入，算出卡片高度，传给 WaterfallContainer 进行布局
-              data-waterfall-height={calculatePostHeight(post, columnWidth)}
-              priority={index < PRIORITY_LIMIT}
-            />
-          ))}
-        </WaterfallContainer>
-      )}
-
-      {/* 底部错误提示 */}
-      {error && posts.length ? (
-        <div className="px-4 pt-4">
-          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
-            {error}
+      {/* 可滚动的内容区域 */}
+      <div className="flex-1 overflow-y-auto pb-20">
+        {isInitialLoading && !posts.length ? (
+          <div className="flex justify-center items-center py-10">
+            <Spinner />
           </div>
-        </div>
-      ) : null}
-
-      <div className="flex w-full bg-gray-100 justify-center px-4 py-6">
-        {/* 无限滚动触发器 */}
-        {hasNextPage ? (
-          <div
-            ref={observerTarget}
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            {isLoadingMore ? (
-              <>
-                <Spinner className="" />
-              </>
-            ) : (
-              <span className="opacity-0">加载更多</span>
-            )}
-          </div>
-        ) : posts.length ? (
-          <p className="text-xs text-muted-foreground">没有更多内容了</p>
         ) : null}
+
+        {/* 瀑布流容器 */}
+        {!isEmpty && (
+          <WaterfallContainer>
+            {posts.map((post, index) => (
+              <PostCard
+                key={post._id}
+                post={post}
+                onClick={() => handlePostClick(post._id)}
+                // 将计算好的列宽传入，算出卡片高度，传给 WaterfallContainer 进行布局
+                data-waterfall-height={calculatePostHeight(post, columnWidth)}
+                priority={index < PRIORITY_LIMIT}
+              />
+            ))}
+          </WaterfallContainer>
+        )}
+
+        {/* 底部错误提示 */}
+        {error && posts.length ? (
+          <div className="px-4 pt-4">
+            <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {error}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex w-full justify-center px-4 py-6">
+          {/* 无限滚动触发器 */}
+          {hasNextPage ? (
+            <div
+              ref={observerTarget}
+              className="flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              {isLoadingMore ? (
+                <>
+                  <Spinner className="" />
+                </>
+              ) : (
+                <span className="opacity-0">加载更多</span>
+              )}
+            </div>
+          ) : posts.length ? (
+            <p className="text-xs text-muted-foreground">没有更多内容了</p>
+          ) : null}
+        </div>
       </div>
     </div>
   )
