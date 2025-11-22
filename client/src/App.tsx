@@ -42,7 +42,10 @@ function Layout() {
   )
 }
 
+import { usePreventZoom } from './hooks/usePreventZoom'
+
 function App() {
+  usePreventZoom()
   const initialize = useAuthStore(s => s.initialize)
   useEffect(() => {
     initialize()
