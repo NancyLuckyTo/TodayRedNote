@@ -2,6 +2,7 @@ import { Share, MessageSquare, Heart, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import defaultAvatar from '@/assets/images/avatar.png'
 import type { IPost } from '@today-red-note/types'
+import { RichTextEditor } from '@/components/create-post/RichTextEditor'
 
 interface PostDetailItemProps {
   post: IPost
@@ -44,12 +45,14 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
         </Button>
       </div>
 
-      {/* 笔记正文 */}
+      {/* 笔记正文，使用 TipTap 只读模式渲染富文本 */}
       <div className="px-4 py-2">
-        {/* 保留文本中的换行符和空格 */}
-        <p className="whitespace-pre-wrap text-base leading-relaxed text-foreground">
-          {body}
-        </p>
+        <RichTextEditor
+          content={body}
+          onChange={() => {}}
+          disabled={true}
+          className="min-h-0"
+        />
       </div>
 
       {/* 图片展示 */}

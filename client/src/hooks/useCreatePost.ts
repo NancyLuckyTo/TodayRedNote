@@ -9,6 +9,7 @@ import type { SelectedImage } from './useImageSelection'
 
 export interface PostFormData {
   body: string
+  bodyPreview?: string
   tags?: string
 }
 
@@ -107,6 +108,7 @@ export const useCreatePost = ({ onSuccess }: UseCreatePostProps = {}) => {
 
       const postRes = await api.post('/posts', {
         body: data.body,
+        bodyPreview: data.bodyPreview,
         images: uploadedImages,
         tags: tagsArray,
       })

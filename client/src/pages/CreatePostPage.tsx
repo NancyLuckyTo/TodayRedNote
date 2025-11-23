@@ -22,21 +22,16 @@ import {
 import { RichTextToolbar } from '@/components/create-post/RichTextToolbar'
 import { useKeyboardPosition } from '@/hooks/useKeyboardPosition'
 import { Editor } from '@tiptap/react'
+import { htmlToText } from '@/lib/post-utils'
 
-const TEXT_MAX_LENGTH = 2000 // 文本最大长度
+const BODY_MAX_LENGTH = 2000 // 文本最大长度
+const BODY_PREVIEW_MAX_LENGTH = 50 // 预览文本最大长度
 
 // 定义表单验证规则
 const postSchema = z.object({
-  body: z.string().min(1, '请输入内容').max(TEXT_MAX_LENGTH, '内容过长'),
+  body: z.string().min(1, '请输入内容').max(BODY_MAX_LENGTH, '内容过长'),
   tags: z.string().optional(),
 })
-
-// 将 HTML 转换为纯文本用于验证长度
-const htmlToText = (html: string): string => {
-  const div = document.createElement('div')
-  div.innerHTML = html
-  return div.textContent || div.innerText || ''
-}
 
 const CreatePostPage = () => {
   const navigate = useNavigate()
@@ -87,13 +82,17 @@ const CreatePostPage = () => {
       form.setError('body', { message: '请输入内容' })
       return
     }
-    if (textContent.length > TEXT_MAX_LENGTH) {
-      form.setError('body', { message: `内容不能超过${TEXT_MAX_LENGTH}字` })
+    if (textContent.length > BODY_MAX_LENGTH) {
+      form.setError('body', { message: `内容不能超过${BODY_MAX_LENGTH}字` })
       return
     }
 
     createPost({
-      data: { ...data, body: editorContent },
+      data: {
+        ...data,
+        body: editorContent,
+        bodyPreview: textContent.substring(0, BODY_PREVIEW_MAX_LENGTH),
+      },
       images,
     })
   }

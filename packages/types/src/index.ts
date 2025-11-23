@@ -17,6 +17,7 @@ export interface IPost {
   _id: string
   author: Author
   body: string
+  bodyPreview?: string
   images: string[]
   tags?: string[]
   createdAt: string

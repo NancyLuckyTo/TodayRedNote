@@ -60,3 +60,14 @@ export const normalizePost = (post: IPost): IPost => ({
       .filter((url): url is string => Boolean(url)) || [],
   coverRatio: post.coverRatio ?? IMAGE_RATIO.SQUARE,
 })
+
+/**
+ * 将 HTML 转换为纯文本
+ * @param html HTML 字符串
+ * @returns 纯文本字符串
+ */
+export const htmlToText = (html: string): string => {
+  const div = document.createElement('div')
+  div.innerHTML = html
+  return div.textContent || div.innerText || ''
+}

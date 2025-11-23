@@ -47,7 +47,7 @@ const normalizeImages = (images: any[]) =>
 router.post('/', auth, async (req: AuthRequest, res, next) => {
   try {
     // 获取输入
-    const { body, images, tags } = req.body ?? {}
+    const { body, bodyPreview, images, tags } = req.body ?? {}
 
     // 验证输入
     if (!body || !String(body).trim()) {
@@ -59,10 +59,13 @@ router.post('/', auth, async (req: AuthRequest, res, next) => {
     if (!author) return res.status(401).json({ message: 'Unauthorized' })
 
     // 构建数据库载荷
+    const bodyStr = String(body).trim()
     const payload: any = {
-      body: String(body).trim(),
+      body: bodyStr,
       author,
     }
+
+    payload.bodyPreview = bodyPreview ? bodyPreview : ''
 
     // 处理可选字段
     if (Array.isArray(tags)) payload.tags = tags.map((t: any) => String(t))
@@ -126,9 +129,13 @@ router.put('/:id', auth, async (req: AuthRequest, res, next) => {
       return res.status(403).json({ message: 'Forbidden' })
     }
 
-    const { body, images, tags } = req.body ?? {}
+    const { body, bodyPreview, images, tags } = req.body ?? {}
     const update: any = {}
-    if (typeof body === 'string') update.body = body.trim()
+    if (typeof body === 'string') {
+      const bodyStr = body.trim()
+      update.body = bodyStr
+      update.bodyPreview = bodyPreview ? bodyPreview : ''
+    }
     if (Array.isArray(tags)) update.tags = tags.map((t: any) => String(t))
     if (Array.isArray(images)) {
       if (images.length > 18) {

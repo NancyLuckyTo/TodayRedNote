@@ -4,7 +4,7 @@ import { Heart, ImageOff } from 'lucide-react'
 import { IMAGE_RATIO } from '@today-red-note/types'
 import type { IPost } from '@today-red-note/types'
 import defaultAvatar from '@/assets/images/avatar.png'
-import { getAspectRatio } from '@/lib/post-utils'
+import { getAspectRatio, htmlToText } from '@/lib/post-utils'
 
 interface PostCardProps {
   post: IPost
@@ -14,7 +14,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onClick, priority = false }: PostCardProps) {
-  const { author, body, images, likesCount = 0 } = post
+  const { author, body, bodyPreview, images, likesCount = 0 } = post
   const [imageError, setImageError] = useState(false)
 
   const hasImages = images && images.length > 0
@@ -26,17 +26,13 @@ export function PostCard({ post, onClick, priority = false }: PostCardProps) {
     ? getAspectRatio(post.coverRatio || IMAGE_RATIO.NONE)
     : '0'
 
-  // 正文预览
-  const bodyPreview = hasBody
-    ? body.length > 50
-      ? body.slice(0, 50) + '...'
-      : body
-    : ''
+  // 正文预览，使用 bodyPreview 字段，如果不存在则从 HTML 中提取
+  const preview = hasBody ? bodyPreview || htmlToText(body) : ''
 
   // 是否为纯文本帖子
   const isTextOnly = !hasImages && hasBody
   // 是否为短文本帖子
-  const isShortText = hasBody && body.length < 50
+  const isShortText = hasBody && preview.length < 50
 
   return (
     <Card className="overflow-hidden" onClick={onClick}>
@@ -64,11 +60,11 @@ export function PostCard({ post, onClick, priority = false }: PostCardProps) {
       {hasBody && (
         <div className="px-3 py-2">
           <p
-            className={`text-foreground line-clamp-3 ${
+            className={`text-foreground line-clamp-2 ${
               isTextOnly && isShortText ? 'text-lg font-medium' : 'text-sm'
             }`}
           >
-            {bodyPreview}
+            {preview}
           </p>
         </div>
       )}
