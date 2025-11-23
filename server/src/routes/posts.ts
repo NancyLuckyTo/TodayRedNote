@@ -3,30 +3,11 @@ import { URL } from 'url'
 import auth, { AuthRequest } from '../middleware/auth.js'
 import Post from '../models/postModel.js'
 import getOssClient from '../services/storageService.js'
-import type { ImageRatio } from '@today-red-note/types'
-import { IMAGE_RATIO, IMAGE_QUALITY } from '@today-red-note/types'
 import { processImageUrl } from '../utils/imageUtils.js'
-
-const RATIO_THRESHOLD = {
-  // 宽高比大于 1.2 视为横图
-  LANDSCAPE_MIN: 1.2,
-  // 宽高比小于 0.8 视为竖图
-  PORTRAIT_MAX: 0.8,
-} as const
+import { calculateRatioType } from '../utils/imageUtils.js'
+import { IMAGE_RATIO, IMAGE_QUALITY } from '@today-red-note/types'
 
 const router = Router()
-
-// 计算图片比例类型
-const calculateRatioType = (image: {
-  width: number
-  height: number
-}): ImageRatio => {
-  if (image.width === 0 || image.height === 0) return IMAGE_RATIO.NONE
-  const ratio = image.width / image.height
-  if (ratio > RATIO_THRESHOLD.LANDSCAPE_MIN) return IMAGE_RATIO.LANDSCAPE
-  if (ratio < RATIO_THRESHOLD.PORTRAIT_MAX) return IMAGE_RATIO.PORTRAIT
-  return IMAGE_RATIO.SQUARE
-}
 
 const normalizeImages = (images: any[]) =>
   images
