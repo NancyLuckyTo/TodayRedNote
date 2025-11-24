@@ -51,13 +51,13 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
           content={body}
           onChange={() => {}}
           disabled={true}
-          className="min-h-0"
+          className="min-h-0 text-lg"
         />
       </div>
 
       {/* 图片展示 */}
       {images && images.length > 0 && (
-        <div className="mt-4 flex gap-2 overflow-x-auto px-4 pb-4 scrollbar-hide snap-x">
+        <div className="mt-4 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide snap-x">
           {images.map((img: string, index: number) => (
             <div
               key={index}
@@ -70,6 +70,15 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
               />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 话题展示 */}
+      {post.topic && (
+        <div className="px-6 pb-2 mt-2">
+          <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-sm text-red-300">
+            #{post.topic.name}
+          </span>
         </div>
       )}
 

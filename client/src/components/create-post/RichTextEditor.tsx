@@ -38,6 +38,8 @@ export const RichTextEditor = forwardRef<
           heading: {
             levels: [1, 2],
           },
+          // 禁用 StarterKit 自带的 link，使用自定义配置
+          link: false,
         }),
         Link.configure({
           openOnClick: false,

@@ -20,6 +20,10 @@ export interface IPost {
   bodyPreview?: string
   images: string[]
   tags?: string[]
+  topic?: {
+    _id: string
+    name: string
+  }
   createdAt: string
   updatedAt: string
   likesCount: number

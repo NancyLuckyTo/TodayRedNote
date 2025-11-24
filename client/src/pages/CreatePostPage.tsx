@@ -24,7 +24,7 @@ import { useKeyboardPosition } from '@/hooks/useKeyboardPosition'
 import { Editor } from '@tiptap/react'
 import { htmlToText } from '@/lib/post-utils'
 
-const BODY_MAX_LENGTH = 2000 // 文本最大长度
+const BODY_MAX_LENGTH = 5000 // 文本最大长度
 const BODY_PREVIEW_MAX_LENGTH = 50 // 预览文本最大长度
 
 // 定义表单验证规则

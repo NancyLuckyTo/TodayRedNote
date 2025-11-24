@@ -50,21 +50,28 @@ export default function PostDetailPage() {
    * 加载更多相关笔记
    */
   const loadMoreRelatedPosts = useCallback(async () => {
-    if (isLoadingMore) return
+    if (isLoadingMore || !id) return
 
     try {
       setIsLoadingMore(true)
-      console.log('Loading more related posts...')
-      // TODO: 实现获取相关笔记的 API 调用
-      // const { data } = await api.get('/posts/related', { params: { id: currentId, ... } })
-      // const newPosts = data.posts.map(normalizePost)
-      // setPosts(prev => [...prev, ...newPosts])
+      // 获取相关笔记
+      const { data } = await api.get(`/posts/${id}/related`)
+      const newPosts = data.posts.map(normalizePost)
+
+      // 过滤掉已存在的笔记
+      setPosts(prev => {
+        const existingIds = new Set(prev.map(p => p._id))
+        const uniqueNewPosts = newPosts.filter(
+          (p: IPost) => !existingIds.has(p._id)
+        )
+        return [...prev, ...uniqueNewPosts]
+      })
     } catch (err) {
       console.error('Failed to load related posts:', err)
     } finally {
       setIsLoadingMore(false)
     }
-  }, [isLoadingMore])
+  }, [isLoadingMore, id])
 
   /**
    * 监听滚动到底部
