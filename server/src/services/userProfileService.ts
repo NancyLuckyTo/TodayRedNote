@@ -1,6 +1,8 @@
 import UserProfile, { IUserProfile } from '../models/userProfileModel.js'
 import Post from '../models/postModel.js'
 import { Types } from 'mongoose'
+import Topic from '../models/topicModel.js'
+import tagService from '../services/tagService.js'
 
 const SCORE_OF_VIEW = 1
 const SCORE_OF_LIKE = 3
@@ -20,16 +22,17 @@ const MAX_BEHAVIOR_HISTORY = 100
 export async function getOrCreateUserProfile(
   userId: string
 ): Promise<IUserProfile> {
-  let profile = await UserProfile.findOne({ userId })
+  const userObjectId = new Types.ObjectId(userId)
+  let profile = await UserProfile.findOne({ userId: userObjectId })
 
   if (!profile) {
     profile = await UserProfile.create({
-      userId,
+      userId: userObjectId,
       interests: [],
       behaviorHistory: [],
       preferences: {
-        preferredTopics: [],
-        blockedTopics: [],
+        preferredTags: [],
+        blockedTags: [],
       },
     })
   }
@@ -40,19 +43,19 @@ export async function getOrCreateUserProfile(
 /**
  * 更新用户兴趣权重
  * @param userId 用户ID
- * @param topicId 话题ID
+ * @param tagId 标签ID
  * @param score 增加的分数
  */
 export async function updateUserInterest(
   userId: string,
-  topicId: string,
+  tagId: string,
   score: number
 ): Promise<void> {
   const profile = await getOrCreateUserProfile(userId)
-  const topicObjectId = new Types.ObjectId(topicId)
+  const tagObjectId = new Types.ObjectId(tagId)
 
   const existingInterestIndex = profile.interests.findIndex(i =>
-    i.topicId.equals(topicObjectId)
+    i.tagId.equals(tagObjectId)
   )
 
   // 更新已有兴趣
@@ -67,7 +70,7 @@ export async function updateUserInterest(
   } else {
     // 新增兴趣
     profile.interests.push({
-      topicId: topicObjectId,
+      tagId: tagObjectId,
       weight: Math.min(score * LEARNING_RATE, 1),
       lastUpdated: new Date(),
     })
@@ -99,11 +102,25 @@ export async function trackUserBehavior(
 
     if (!post) return
 
+    // Fallback: 如果没有标签但有话题，使用话题生成标签
+    if ((!post.tags || post.tags.length === 0) && post.topic) {
+      try {
+        const topic = await Topic.findById(post.topic)
+        if (topic) {
+          const tagIds = await tagService.getOrCreateTags([topic.name])
+          post.tags = tagIds
+          await post.save() // 保存生成的标签到笔记
+        }
+      } catch (err) {
+        console.error('Failed to fallback topic to tag:', err)
+      }
+    }
+
     // 记录行为历史
     profile.behaviorHistory.push({
       action,
       postId: new Types.ObjectId(postId),
-      topicId: post.topic,
+      tagIds: post.tags,
       timestamp: new Date(),
     })
 
@@ -115,15 +132,19 @@ export async function trackUserBehavior(
 
     await profile.save()
 
-    // 如果笔记有话题，更新兴趣权重
-    if (post.topic) {
+    // 如果笔记有标签，更新兴趣权重
+    if (post.tags && post.tags.length > 0) {
       const scoreMap = {
         view: SCORE_OF_VIEW,
         like: SCORE_OF_LIKE,
         collect: SCORE_OF_COLLECT,
         share: SCORE_OF_SHARE,
       }
-      await updateUserInterest(userId, post.topic.toString(), scoreMap[action])
+
+      // 为每个标签更新兴趣
+      for (const tagId of post.tags) {
+        await updateUserInterest(userId, tagId.toString(), scoreMap[action])
+      }
     }
   } catch (error) {
     console.error('Track user behavior failed:', error)

@@ -3,7 +3,7 @@ import mongoose, { Document, Model, Schema, Types } from 'mongoose'
 export interface IUserProfile extends Document {
   userId: Types.ObjectId
   interests: {
-    topicId: Types.ObjectId // 指向具体话题
+    tagId: Types.ObjectId // 指向具体标签
     weight: number // 权重分
     lastUpdated: Date // 时间衰减算法
   }[]
@@ -11,12 +11,12 @@ export interface IUserProfile extends Document {
   behaviorHistory: {
     action: 'view' | 'like' | 'collect' | 'share'
     postId: Types.ObjectId
-    topicId?: Types.ObjectId
+    tagIds?: Types.ObjectId[]
     timestamp: Date
   }[]
   preferences: {
-    preferredTopics: Types.ObjectId[] // 用户偏好话题
-    blockedTopics: Types.ObjectId[] // 用户屏蔽话题
+    preferredTags: Types.ObjectId[] // 用户偏好标签
+    blockedTags: Types.ObjectId[] // 用户屏蔽标签
   }
   createdAt: Date
   updatedAt: Date
@@ -33,7 +33,7 @@ const UserProfileSchema: Schema<IUserProfile> = new Schema<IUserProfile>(
     },
     interests: [
       {
-        topicId: { type: Schema.Types.ObjectId, ref: 'Topic', required: true },
+        tagId: { type: Schema.Types.ObjectId, ref: 'Tag', required: true },
         weight: { type: Number, required: true, min: 0, max: 1 },
         lastUpdated: { type: Date, default: Date.now },
       },
@@ -46,20 +46,17 @@ const UserProfileSchema: Schema<IUserProfile> = new Schema<IUserProfile>(
           required: true,
         },
         postId: { type: Schema.Types.ObjectId, ref: 'Post', required: true },
-        topicId: { type: Schema.Types.ObjectId, ref: 'Topic' },
+        tagIds: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
         timestamp: { type: Date, default: Date.now },
       },
     ],
     preferences: {
-      preferredTopics: [{ type: Schema.Types.ObjectId, ref: 'Topic' }],
-      blockedTopics: [{ type: Schema.Types.ObjectId, ref: 'Topic' }],
+      preferredTags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
+      blockedTags: [{ type: Schema.Types.ObjectId, ref: 'Tag' }],
     },
   },
   { timestamps: true }
 )
-
-// 在 userId 上建立索引，用于快速查询
-UserProfileSchema.index({ userId: 1 })
 
 const UserProfile: Model<IUserProfile> =
   mongoose.models.UserProfile ||

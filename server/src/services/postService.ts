@@ -93,12 +93,6 @@ class PostService {
 
     if (!post) return null
 
-    if (currentUserId) {
-      userProfileService
-        .trackUserBehavior(currentUserId, id, 'view')
-        .catch(console.error)
-    }
-
     const hasImages = Array.isArray(post.images) && post.images.length > 0
     const processedImages = hasImages
       ? post.images.map((img: any) => ({

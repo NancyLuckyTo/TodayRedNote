@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express'
 import { AuthRequest } from '../middleware/auth.js'
 import postService from '../services/postService.js'
+import userProfileService from '../services/userProfileService.js'
 import jwt from 'jsonwebtoken'
 
 class PostController {
@@ -34,16 +35,26 @@ class PostController {
             token,
             process.env.JWT_SECRET || 'secret'
           )
-          if (decoded && decoded.id) {
-            currentUserId = decoded.id
+          if (decoded && decoded.userId) {
+            currentUserId = decoded.userId
           }
         } catch (e) {
-          // ignore invalid token
+          // 如 token 无效则忽略
         }
       }
 
       const post = await postService.getPostById(id, currentUserId)
       if (!post) return res.status(404).json({ message: 'Not found' })
+
+      // 记录浏览行为
+      if (currentUserId) {
+        // 异步记录，不阻塞响应
+        userProfileService
+          .trackUserBehavior(currentUserId, id, 'view')
+          .catch((err: any) => {
+            console.error('Failed to track view behavior:', err)
+          })
+      }
 
       return res.json({ post })
     } catch (err) {
