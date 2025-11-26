@@ -303,6 +303,66 @@ class PostService {
   }
 
   /**
+   * 获取用户自己的笔记列表
+   */
+  async getUserPosts(userId: string, limit: number, cursor?: string) {
+    let query: any = { author: userId }
+
+    if (cursor) {
+      try {
+        const decoded = JSON.parse(
+          Buffer.from(cursor, 'base64').toString('utf-8')
+        )
+        const cursorTime = new Date(decoded.updatedAt)
+        const cursorId = decoded._id
+
+        query = {
+          author: userId,
+          $or: [
+            { updatedAt: { $lt: cursorTime } },
+            { updatedAt: cursorTime, _id: { $lt: cursorId } },
+          ],
+        }
+      } catch (err) {
+        query = { author: userId }
+      }
+    }
+
+    const posts = await Post.find(query)
+      .sort({ updatedAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .populate('author', 'username avatar')
+      .populate('topic', 'name')
+      .populate('tags', 'name')
+      .lean()
+
+    const hasNextPage = posts.length > limit
+    if (hasNextPage) {
+      posts.pop()
+    }
+
+    const formattedPosts = posts.map((post: any) =>
+      formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
+    )
+
+    let nextCursor: string | null = null
+    if (hasNextPage && formattedPosts.length > 0) {
+      const lastPost = formattedPosts[formattedPosts.length - 1]
+      const cursorPayload = {
+        updatedAt: lastPost.updatedAt,
+        _id: lastPost._id,
+      }
+      nextCursor = encodeCursor(cursorPayload)
+    }
+
+    return this.buildPaginationResult(formattedPosts, {
+      nextCursor,
+      hasNextPage,
+      limit,
+    })
+  }
+
+  /**
    * 混合型个性化推荐信息流：先推荐用户画像匹配的笔记，如果余量不足则推荐时间流笔记
    */
   async getPersonalizedFeed(userId: string, limit: number, cursor?: string) {

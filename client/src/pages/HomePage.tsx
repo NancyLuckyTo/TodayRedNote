@@ -3,23 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { WaterfallContainer } from '../components/WaterfallContainer'
 import { PostCard } from '../components/PostCard'
 import api from '@/lib/api'
-import type { IPost } from '@today-red-note/types'
+import type { PostsResponse } from '@/types/posts'
 import { calculatePostHeight, normalizePost } from '@/lib/post-utils'
 import { Spinner } from '@/components/ui/spinner'
 import { useHomeStore } from '@/store/homeStore'
-
-type BackendPostsResponse = {
-  posts: IPost[]
-  pagination?: {
-    nextCursor: string | null
-    hasNextPage: boolean
-    limit: number
-  }
-}
-
-const FETCH_LIMIT = 10
-const ROOT_MARGIN_VALUE = '0px 0px 500px 0px'
-const PRIORITY_LIMIT = 6
+import { ROOT_MARGIN_VALUE } from '@/constants/post'
+import { FETCH_LIMIT, PRIORITY_LIMIT } from '@today-red-note/types'
 
 const HomePage = () => {
   const {
@@ -59,7 +48,7 @@ const HomePage = () => {
       }
 
       try {
-        const { data } = await api.get<BackendPostsResponse>('/posts', {
+        const { data } = await api.get<PostsResponse>('/posts', {
           params: {
             cursor: cursor ?? undefined,
             limit: FETCH_LIMIT,

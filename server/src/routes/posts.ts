@@ -7,6 +7,12 @@ const router = Router()
 // 发布笔记
 router.post('/', auth, postController.create)
 
+// 获取用户自己的笔记列表
+router.get('/mine', auth, postController.listMine)
+
+// 获取瀑布流笔记列表
+router.get('/', postController.list)
+
 // 获取笔记详情，联表作者信息
 router.get('/:id', postController.getOne)
 
@@ -18,8 +24,5 @@ router.put('/:id', auth, postController.update)
 
 // 删除笔记
 router.delete('/:id', auth, postController.delete)
-
-// 获取笔记列表
-router.get('/', postController.list)
 
 export default router

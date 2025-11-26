@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { ChevronLeft, Search, MoreHorizontal } from 'lucide-react'
 import api from '@/lib/api'
 import { Spinner } from '@/components/ui/spinner'
@@ -14,6 +14,12 @@ const ROOT_MARGIN_VALUE = '250px'
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>() // 获取 URL 参数
   const navigate = useNavigate()
+  const location = useLocation()
+  // 从用户个人页面跳转而来，不加载相关推荐
+  const disableRecommendations = Boolean(
+    (location.state as { disableRecommendations?: boolean } | null)
+      ?.disableRecommendations
+  )
   const [posts, setPosts] = useState<IPost[]>([]) // 存储笔记列表
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +33,7 @@ export default function PostDetailPage() {
    * 加载更多相关笔记
    */
   const loadMoreRelatedPosts = useCallback(async () => {
-    if (isLoadingMore || !id) return
+    if (disableRecommendations || isLoadingMore || !id) return
 
     try {
       setIsLoadingMore(true)
@@ -48,7 +54,7 @@ export default function PostDetailPage() {
     } finally {
       setIsLoadingMore(false)
     }
-  }, [isLoadingMore, id])
+  }, [disableRecommendations, isLoadingMore, id])
 
   // 初始加载
   useEffect(() => {
@@ -66,7 +72,9 @@ export default function PostDetailPage() {
         setPosts([normalizedPost])
 
         // 触发加载相关推荐
-        setShouldLoadRelated(true)
+        if (!disableRecommendations) {
+          setShouldLoadRelated(true)
+        }
       } catch (err) {
         console.error(err)
         setError('笔记不存在')
@@ -76,20 +84,22 @@ export default function PostDetailPage() {
     }
 
     fetchInitialPost()
-  }, [id])
+  }, [disableRecommendations, id])
 
   // 在初始笔记加载完成后，加载相关推荐
   useEffect(() => {
-    if (shouldLoadRelated && !loading) {
+    if (!disableRecommendations && shouldLoadRelated && !loading) {
       loadMoreRelatedPosts()
       setShouldLoadRelated(false)
     }
-  }, [shouldLoadRelated, loading, loadMoreRelatedPosts])
+  }, [disableRecommendations, shouldLoadRelated, loading, loadMoreRelatedPosts])
 
   /**
    * 监听滚动到底部
    */
   useEffect(() => {
+    if (disableRecommendations) return
+
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting && !loading && !error) {
@@ -104,7 +114,7 @@ export default function PostDetailPage() {
     }
 
     return () => observer.disconnect()
-  }, [loadMoreRelatedPosts, loading, error])
+  }, [disableRecommendations, loadMoreRelatedPosts, loading, error])
 
   // 加载中
   if (loading) {

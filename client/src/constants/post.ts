@@ -1,0 +1,2 @@
+// 瀑布流布居中触发加载的距离
+export const ROOT_MARGIN_VALUE = '0px 0px 500px 0px'

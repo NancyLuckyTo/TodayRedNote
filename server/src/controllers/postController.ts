@@ -3,8 +3,12 @@ import { AuthRequest } from '../middleware/auth.js'
 import postService from '../services/postService.js'
 import userProfileService from '../services/userProfileService.js'
 import jwt from 'jsonwebtoken'
+import { FETCH_LIMIT, MAX_IMAGES } from '@today-red-note/types'
 
 class PostController {
+  /**
+   * 创建笔记
+   */
   async create(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const author = req.userId
@@ -13,16 +17,16 @@ class PostController {
       const post = await postService.createPost(author, req.body)
       return res.status(201).json({ post })
     } catch (err: any) {
-      if (
-        err.message === 'Body are required' ||
-        err.message === 'Max 18 images'
-      ) {
+      if (err.message === `Max ${MAX_IMAGES} images`) {
         return res.status(400).json({ message: err.message })
       }
       next(err)
     }
   }
 
+  /**
+   * 获取笔记详情
+   */
   async getOne(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
@@ -62,6 +66,9 @@ class PostController {
     }
   }
 
+  /**
+   * 获取相关笔记
+   */
   async getRelated(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
@@ -95,6 +102,9 @@ class PostController {
     }
   }
 
+  /**
+   * 删除笔记
+   */
   async delete(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
@@ -113,12 +123,12 @@ class PostController {
     }
   }
 
+  /**
+   * 获取笔记列表
+   */
   async list(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const limit = Math.min(
-        parseInt(String(req.query.limit as string)) || 10,
-        50
-      )
+      const limit = parseInt(String(req.query.limit as string)) || FETCH_LIMIT
       const cursor = req.query.cursor as string | undefined
 
       let currentUserId: string | undefined
@@ -142,6 +152,27 @@ class PostController {
       const result = currentUserId
         ? await postService.getPersonalizedFeed(currentUserId, limit, cursor)
         : await postService.getPosts(limit, cursor)
+
+      return res.json(result)
+    } catch (err) {
+      next(err)
+    }
+  }
+
+  /**
+   * 获取用户自己的帖子列表
+   */
+  async listMine(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.userId
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' })
+      }
+
+      const limit = parseInt(String(req.query.limit as string)) || FETCH_LIMIT
+      const cursor = req.query.cursor as string | undefined
+
+      const result = await postService.getUserPosts(userId, limit, cursor)
 
       return res.json(result)
     } catch (err) {
