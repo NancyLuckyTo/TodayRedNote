@@ -121,7 +121,28 @@ class PostController {
       )
       const cursor = req.query.cursor as string | undefined
 
-      const result = await postService.getPosts(limit, cursor)
+      let currentUserId: string | undefined
+
+      const authHeader = req.headers.authorization || ''
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        try {
+          const decoded: any = jwt.verify(
+            token,
+            process.env.JWT_SECRET || 'secret'
+          )
+          if (decoded && decoded.userId) {
+            currentUserId = decoded.userId
+          }
+        } catch (e) {
+          // token 无效则忽略，继续走非个性化流
+        }
+      }
+
+      const result = currentUserId
+        ? await postService.getPersonalizedFeed(currentUserId, limit, cursor)
+        : await postService.getPosts(limit, cursor)
+
       return res.json(result)
     } catch (err) {
       next(err)

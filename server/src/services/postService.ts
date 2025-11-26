@@ -1,31 +1,67 @@
 import { URL } from 'url'
 import Post from '../models/postModel.js'
 import getOssClient from '../services/storageService.js'
-import { processImageUrl, calculateRatioType } from '../utils/imageUtils.js'
-import { IMAGE_RATIO, IMAGE_QUALITY } from '@today-red-note/types'
+import { encodeCursor, decodeFeedCursor } from '../utils/cursorUtils.js'
+import {
+  formatPostWithImages,
+  applyImagesToTarget,
+} from '../utils/postUtils.js'
+import { IMAGE_QUALITY } from '@today-red-note/types'
 import { extractTopic, extractTags } from '../services/aiService.js'
 import topicService from '../services/topicService.js'
 import tagService from '../services/tagService.js'
 import userProfileService from '../services/userProfileService.js'
 
 const MAX_RELATED_NOTES = 10 // 笔记详情页相关笔记最大数量
-
-const normalizeImages = (images: any[]) =>
-  images
-    .filter((img: any) => img && typeof img.url === 'string' && img.url)
-    .map((img: any) => ({
-      url: String(img.url),
-      width:
-        typeof img.width === 'number' && Number.isFinite(img.width)
-          ? img.width
-          : 0,
-      height:
-        typeof img.height === 'number' && Number.isFinite(img.height)
-          ? img.height
-          : 0,
-    }))
+const MAX_INTEREST_TAGS = 10 // 个性化推荐时使用的兴趣标签数量上限
 
 class PostService {
+  /**
+   * 构建分页结果
+   */
+  private buildPaginationResult(
+    posts: any[],
+    pagination: {
+      nextCursor: string | null
+      hasNextPage: boolean
+      limit: number
+    }
+  ) {
+    return {
+      posts,
+      pagination,
+    }
+  }
+
+  /**
+   * 构建兜底流结果
+   */
+  private async buildFallbackFeedResult(limit: number, cursor?: string) {
+    const baseResult = await this.getPosts(limit, cursor)
+    const basePagination = baseResult.pagination ?? {
+      nextCursor: null,
+      hasNextPage: false,
+      limit,
+    }
+
+    let wrappedNextCursor: string | null = null
+    if (basePagination.hasNextPage && basePagination.nextCursor) {
+      const payload = {
+        phase: 'fallback',
+        innerCursor: basePagination.nextCursor,
+      }
+      wrappedNextCursor = encodeCursor(payload)
+    }
+
+    return this.buildPaginationResult(baseResult.posts, {
+      ...basePagination,
+      nextCursor: wrappedNextCursor,
+    })
+  }
+
+  /**
+   * 创建笔记
+   */
   async createPost(userId: string, data: any) {
     const { body, bodyPreview, images } = data
 
@@ -41,19 +77,7 @@ class PostService {
 
     payload.bodyPreview = bodyPreview ? bodyPreview : ''
 
-    if (Array.isArray(images)) {
-      if (images.length > 18) {
-        throw new Error('Max 18 images')
-      }
-
-      const validImages = normalizeImages(images)
-
-      if (validImages.length > 0) {
-        payload.coverRatio = calculateRatioType(validImages[0])
-      }
-
-      payload.images = validImages
-    }
+    applyImagesToTarget(payload, images)
 
     try {
       const topicName = await extractTopic(bodyStr)
@@ -85,6 +109,9 @@ class PostService {
     return post
   }
 
+  /**
+   * 获取笔记详情
+   */
   async getPostById(id: string, currentUserId?: string) {
     const post = await Post.findById(id)
       .populate('author', 'username')
@@ -93,20 +120,12 @@ class PostService {
 
     if (!post) return null
 
-    const hasImages = Array.isArray(post.images) && post.images.length > 0
-    const processedImages = hasImages
-      ? post.images.map((img: any) => ({
-          ...img,
-          url: processImageUrl(img.url, IMAGE_QUALITY.PREVIEW),
-        }))
-      : []
-
-    return {
-      ...post.toObject(),
-      images: processedImages,
-    }
+    return formatPostWithImages(post, IMAGE_QUALITY.PREVIEW, false)
   }
 
+  /**
+   * 用于笔记详情页获取更多相关笔记
+   */
   async getRelatedPosts(id: string) {
     const currentPost = await Post.findById(id)
     if (!currentPost) return null
@@ -156,24 +175,14 @@ class PostService {
       MAX_RELATED_NOTES
     )
 
-    return posts.map((post: any) => {
-      const hasImages = Array.isArray(post.images) && post.images.length > 0
-      const processedImages = hasImages
-        ? post.images.map((img: any) => ({
-            ...img,
-            url: processImageUrl(img.url, IMAGE_QUALITY.THUMBNAIL),
-          }))
-        : []
-
-      return {
-        ...post,
-        images: processedImages,
-        coverRatio: post.coverRatio,
-        isTextOnly: !hasImages,
-      }
-    })
+    return posts.map((post: any) =>
+      formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
+    )
   }
 
+  /**
+   * 更新笔记
+   */
   async updatePost(id: string, userId: string, data: any) {
     const found = await Post.findById(id)
     if (!found) return null
@@ -189,25 +198,17 @@ class PostService {
       update.body = bodyStr
       update.bodyPreview = bodyPreview ? bodyPreview : ''
     }
+
     if (Array.isArray(images)) {
-      if (images.length > 18) {
-        throw new Error('Max 18 images')
-      }
-
-      const validImages = normalizeImages(images)
-
-      if (validImages.length > 0) {
-        update.coverRatio = calculateRatioType(validImages[0])
-      } else {
-        update.coverRatio = IMAGE_RATIO.NONE
-      }
-
-      update.images = validImages
+      applyImagesToTarget(update, images, { resetWhenEmpty: true })
     }
 
     return await Post.findByIdAndUpdate(id, update, { new: true })
   }
 
+  /**
+   * 删除笔记
+   */
   async deletePost(id: string, userId: string) {
     const found = await Post.findById(id)
     if (!found) return null
@@ -242,6 +243,9 @@ class PostService {
     return true
   }
 
+  /**
+   * 用于瀑布流首页获取笔记列表
+   */
   async getPosts(limit: number, cursor?: string) {
     let query: any = {}
 
@@ -277,41 +281,187 @@ class PostService {
       posts.pop()
     }
 
-    const formattedPosts = posts.map((post: any) => {
-      const hasImages = Array.isArray(post.images) && post.images.length > 0
-      const processedImages = hasImages
-        ? post.images.map((img: any) => ({
-            ...img,
-            url: processImageUrl(img.url, IMAGE_QUALITY.THUMBNAIL),
-          }))
-        : []
-
-      return {
-        ...post,
-        images: processedImages,
-        coverRatio: post.coverRatio,
-        isTextOnly: !hasImages,
-      }
-    })
+    const formattedPosts = posts.map((post: any) =>
+      formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
+    )
 
     let nextCursor = null
     if (hasNextPage && formattedPosts.length > 0) {
       const lastPost = formattedPosts[formattedPosts.length - 1]
-      const cursorPayload = JSON.stringify({
+      const cursorPayload = {
         createdAt: lastPost.createdAt,
         _id: lastPost._id,
-      })
-      nextCursor = Buffer.from(cursorPayload).toString('base64')
+      }
+      nextCursor = encodeCursor(cursorPayload)
     }
 
-    return {
-      posts: formattedPosts,
-      pagination: {
-        nextCursor,
-        hasNextPage,
-        limit,
-      },
+    return this.buildPaginationResult(formattedPosts, {
+      nextCursor,
+      hasNextPage,
+      limit,
+    })
+  }
+
+  /**
+   * 混合型个性化推荐信息流：先推荐用户画像匹配的笔记，如果余量不足则推荐时间流笔记
+   */
+  async getPersonalizedFeed(userId: string, limit: number, cursor?: string) {
+    let phase: 'profile' | 'fallback' = 'profile'
+    let profileCursorCreatedAt: Date | undefined // 用于在画像阶段进行数据库分页查询
+    let profileCursorId: string | undefined
+    let fallbackInnerCursor: string | undefined
+
+    // 如果存在 cursor，则说明不是第一页，需要解析 cursor 中的状态
+    if (cursor) {
+      const decoded = decodeFeedCursor(cursor) // 解码 base64 字符串为 JSON 对象
+      if (
+        decoded &&
+        decoded.phase === 'profile' &&
+        decoded.createdAt &&
+        decoded._id
+      ) {
+        // 画像阶段
+        phase = 'profile'
+        profileCursorCreatedAt = new Date(decoded.createdAt)
+        profileCursorId = String(decoded._id)
+      } else if (decoded && decoded.phase === 'fallback') {
+        // 兜底阶段
+        phase = 'fallback'
+        if (typeof decoded.innerCursor === 'string') {
+          fallbackInnerCursor = decoded.innerCursor
+        }
+      } else {
+        // 解析失败，退化到兜底阶段
+        phase = 'fallback'
+        fallbackInnerCursor = cursor
+      }
     }
+
+    // 兜底阶段：完全复用时间流逻辑
+    if (phase === 'fallback') {
+      return this.buildFallbackFeedResult(limit, fallbackInnerCursor)
+    }
+
+    // 画像阶段：根据用户兴趣标签召回
+    const profile = await userProfileService.getOrCreateUserProfile(userId)
+
+    // 提取用户感兴趣的标签，并按权重降序排列
+    const sortedInterests = Array.isArray(profile.interests)
+      ? [...profile.interests].sort((a: any, b: any) => b.weight - a.weight)
+      : []
+
+    // 取出前 MAX_INTEREST_TAGS 个标签 ID，避免查询条件过长
+    const interestTagIds = sortedInterests
+      .slice(0, MAX_INTEREST_TAGS)
+      .map((item: any) => item.tagId)
+
+    // 无兴趣标签，直接退化到兜底流
+    if (!interestTagIds.length) {
+      return this.buildFallbackFeedResult(limit)
+    }
+
+    // 执行数据库查询
+    const query: any = {
+      // 构造查询条件：笔记的 tags 字段必须包含用户的兴趣标签之一 ($in 查询)
+      tags: { $in: interestTagIds },
+    }
+
+    if (profileCursorCreatedAt && profileCursorId) {
+      query.$or = [
+        { createdAt: { $lt: profileCursorCreatedAt } },
+        { createdAt: profileCursorCreatedAt, _id: { $lt: profileCursorId } },
+      ]
+    }
+
+    // 查询数据库
+    const rawProfilePosts = await Post.find(query)
+      .sort({ createdAt: -1, _id: -1 }) // 按发布时间倒序
+      .limit(limit + 1)
+      .populate('author', 'username avatar')
+      .populate('topic', 'name')
+      .populate('tags', 'name')
+      .lean() // 转为普通 JS 对象，提高性能
+
+    // 是否还有下一页
+    const hasMoreProfile = rawProfilePosts.length > limit
+    if (hasMoreProfile) {
+      rawProfilePosts.pop()
+    }
+
+    // 数据清洗与格式化
+    const profilePosts = rawProfilePosts.map((post: any) =>
+      formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
+    )
+
+    // 如果画像召回为空，直接进入兜底阶段
+    if (!profilePosts.length) {
+      return this.buildFallbackFeedResult(limit)
+    }
+
+    // 画像阶段还有下一页，则本次只返回画像数据
+    if (hasMoreProfile) {
+      const lastPost = profilePosts[profilePosts.length - 1]
+      const payload = {
+        phase: 'profile',
+        createdAt: lastPost.createdAt,
+        _id: lastPost._id,
+      }
+      const nextCursor = encodeCursor(payload)
+
+      return this.buildPaginationResult(profilePosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    // 画像阶段最后一页：不足一整页，用兜底流补齐；
+    // 如果刚好一整页（fallbackNeeded = 0），则下一页直接切换到兜底阶段
+    const fallbackNeeded = Math.max(limit - profilePosts.length, 0)
+
+    if (fallbackNeeded <= 0) {
+      const payload = {
+        phase: 'fallback', // 下一次请求直接从 fallback 开始
+      }
+      const nextCursor = encodeCursor(payload)
+
+      return this.buildPaginationResult(profilePosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    const fallbackResult = await this.getPosts(fallbackNeeded, undefined)
+    const fallbackPagination = fallbackResult.pagination ?? {
+      nextCursor: null,
+      hasNextPage: false,
+      limit: fallbackNeeded,
+    }
+
+    // 去重逻辑：防止兜底流里出现了画像流里刚展示过的笔记
+    const existingIds = new Set(
+      profilePosts.map((post: any) => String(post._id))
+    )
+    const dedupFallbackPosts = fallbackResult.posts.filter(
+      (post: any) => !existingIds.has(String(post._id))
+    )
+    const combinedPosts = [...profilePosts, ...dedupFallbackPosts]
+
+    let combinedNextCursor: string | null = null
+    if (fallbackPagination.hasNextPage && fallbackPagination.nextCursor) {
+      const payload = {
+        phase: 'fallback',
+        innerCursor: fallbackPagination.nextCursor,
+      }
+      combinedNextCursor = encodeCursor(payload)
+    }
+
+    return this.buildPaginationResult(combinedPosts, {
+      nextCursor: combinedNextCursor,
+      hasNextPage: Boolean(fallbackPagination.hasNextPage),
+      limit,
+    })
   }
 }
 
