@@ -8,6 +8,7 @@ import { useEffect } from 'react'
 import BottomNav from './components/BottomNav'
 import HomePage from './pages/HomePage'
 import CreatePostPage from './pages/CreatePostPage'
+import EditPostPage from './pages/EditPostPage'
 import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import PrivateRoute from './components/PrivateRoute'
@@ -19,6 +20,7 @@ function Layout() {
   const location = useLocation()
   const hideBottomNav =
     location.pathname.startsWith('/post/') ||
+    location.pathname.startsWith('/editPost/') ||
     location.pathname === '/createPost'
 
   return (
@@ -36,6 +38,14 @@ function Layout() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/post/:id" element={<PostDetailPage />} />
+        <Route
+          path="/editPost/:id"
+          element={
+            <PrivateRoute>
+              <EditPostPage />
+            </PrivateRoute>
+          }
+        />
       </Routes>
 
       {!hideBottomNav && <BottomNav />}

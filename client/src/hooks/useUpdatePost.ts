@@ -5,28 +5,38 @@ import api from '@/lib/api'
 import { uploadImages, parseTags, type PostFormData } from '@/lib/postUtils'
 import type { SelectedImage } from './useImageSelection'
 
-interface UseCreatePostProps {
+interface UseUpdatePostProps {
   onSuccess?: () => void
 }
 
-export const useCreatePost = ({ onSuccess }: UseCreatePostProps = {}) => {
+export const useUpdatePost = ({ onSuccess }: UseUpdatePostProps = {}) => {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({
+      postId,
       data,
       images,
+      existingImages,
     }: {
+      postId: string
       data: PostFormData
-      images: SelectedImage[]
+      images: SelectedImage[] // 新上传的图片
+      existingImages: string[] // 保留的原有图片 URL
     }) => {
       const uploadedImages = await uploadImages(images)
 
-      const postRes = await api.post('/posts', {
+      // 合并保留的原有图片和新上传的图片
+      const allImages = [
+        ...existingImages.map(url => ({ url, width: 0, height: 0 })),
+        ...uploadedImages,
+      ]
+
+      const postRes = await api.put(`/posts/${postId}`, {
         body: data.body,
         bodyPreview: data.bodyPreview,
-        images: uploadedImages,
+        images: allImages,
         tags: parseTags(data.tags),
       })
 
@@ -34,13 +44,13 @@ export const useCreatePost = ({ onSuccess }: UseCreatePostProps = {}) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] })
-      toast.success('发布成功！')
+      toast.success('更新成功！')
       onSuccess?.()
-      navigate('/')
+      navigate(-1)
     },
     onError: error => {
       const errorMessage = error instanceof Error ? error.message : '请稍后重试'
-      toast.error('发布失败', { description: errorMessage })
+      toast.error('更新失败', { description: errorMessage })
     },
   })
 }

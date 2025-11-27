@@ -4,7 +4,7 @@ import { Heart, ImageOff } from 'lucide-react'
 import { IMAGE_RATIO } from '@today-red-note/types'
 import type { IPost } from '@today-red-note/types'
 import defaultAvatar from '@/assets/images/avatar.png'
-import { getAspectRatio, htmlToText } from '@/lib/post-utils'
+import { getAspectRatio, htmlToText } from '@/lib/postUtils'
 
 interface PostCardProps {
   post: IPost

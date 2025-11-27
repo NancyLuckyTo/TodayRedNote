@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { useRef, useState } from 'react'
+import { Editor } from '@tiptap/react'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -12,7 +12,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { useImageSelection } from '@/hooks/useImageSelection'
-import { useCreatePost, type PostFormData } from '@/hooks/useCreatePost'
+import { useCreatePost } from '@/hooks/useCreatePost'
 import { ImageUploader } from '@/components/create-post/ImageUploader'
 import {
   RichTextEditor,
@@ -20,17 +20,8 @@ import {
 } from '@/components/create-post/RichTextEditor'
 import { RichTextToolbar } from '@/components/create-post/RichTextToolbar'
 import { useKeyboardPosition } from '@/hooks/useKeyboardPosition'
-import { Editor } from '@tiptap/react'
-import { htmlToText } from '@/lib/post-utils'
-
-const BODY_MAX_LENGTH = 5000 // 文本最大长度
-const BODY_PREVIEW_MAX_LENGTH = 50 // 预览文本最大长度
-
-// 定义表单验证规则
-const postSchema = z.object({
-  body: z.string().min(1, '请输入内容').max(BODY_MAX_LENGTH, '内容过长'),
-  tags: z.string().optional(),
-})
+import { htmlToText, postSchema, type PostFormData } from '@/lib/postUtils'
+import { BODY_MAX_LENGTH, BODY_PREVIEW_MAX_LENGTH } from '@/constants/post'
 
 const CreatePostPage = () => {
   const navigate = useNavigate()
@@ -55,15 +46,9 @@ const CreatePostPage = () => {
     },
   })
 
-  // 使用回调 ref 来同步 editor 实例到 state，避免在渲染期间访问 ref
   const handleEditorRef = (ref: RichTextEditorRef | null) => {
-    if (ref) {
-      editorRef.current = ref
-      setEditorInstance(ref.editor)
-    } else {
-      editorRef.current = null
-      setEditorInstance(null)
-    }
+    editorRef.current = ref
+    setEditorInstance(ref?.editor ?? null)
   }
 
   const form = useForm<PostFormData>({
@@ -75,7 +60,6 @@ const CreatePostPage = () => {
   })
 
   const onSubmit = (data: PostFormData) => {
-    // 验证文本长度（去除 HTML 标签）
     const textContent = htmlToText(editorContent)
     if (textContent.trim().length === 0) {
       form.setError('body', { message: '请输入内容' })

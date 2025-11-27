@@ -5,7 +5,7 @@ import api from '@/lib/api'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { normalizePost } from '@/lib/post-utils'
+import { normalizePost } from '@/lib/postUtils'
 import type { IPost } from '@today-red-note/types'
 import { PostDetailItem } from '@/components/PostDetailItem'
 
