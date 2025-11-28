@@ -84,6 +84,7 @@ export const useImageSelection = ({
 
   return {
     images,
+    setImages,
     fileInputRef,
     handleFilesSelected,
     removeImageAt,

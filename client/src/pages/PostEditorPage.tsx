@@ -1,8 +1,10 @@
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { Editor } from '@tiptap/react'
+import { toast } from 'sonner'
+import { Cloud, CloudOff } from 'lucide-react'
 import type { IPost } from '@today-red-note/types'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,9 +15,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Spinner } from '@/components/ui/spinner'
-import { useImageSelection } from '@/hooks/useImageSelection'
+import {
+  useImageSelection,
+  type SelectedImage,
+} from '@/hooks/useImageSelection'
 import { useCreatePost } from '@/hooks/useCreatePost'
 import { useUpdatePost } from '@/hooks/useUpdatePost'
+import { useDraftAutoSave } from '@/hooks/useDraftAutoSave'
 import { ImageUploader } from '@/components/create-post/ImageUploader'
 import {
   RichTextEditor,
@@ -24,6 +30,7 @@ import {
 import { RichTextToolbar } from '@/components/create-post/RichTextToolbar'
 import { useKeyboardPosition } from '@/hooks/useKeyboardPosition'
 import { htmlToText, postSchema, type PostFormData } from '@/lib/postUtils'
+import { draftStorage } from '@/lib/draftStorage'
 import api from '@/lib/api'
 import { BODY_MAX_LENGTH, BODY_PREVIEW_MAX_LENGTH } from '@/constants/post'
 
@@ -45,13 +52,14 @@ const PostEditorPage = () => {
 
   // 编辑模式下的已有图片
   const [existingImages, setExistingImages] = useState<string[]>([])
-  // 编辑模式下的加载状态
-  const [loading, setLoading] = useState(isEditMode)
+  // 加载状态（编辑模式加载帖子，新建模式加载草稿）
+  const [loading, setLoading] = useState(true)
   const [post, setPost] = useState<IPost | null>(null)
 
   // 新上传的图片
   const {
     images: newImages,
+    setImages: setNewImages,
     fileInputRef,
     handleFilesSelected,
     removeImageAt,
@@ -59,9 +67,41 @@ const PostEditorPage = () => {
     triggerFileInput,
   } = useImageSelection()
 
+  // 图片上传成功回调
+  const handleImagesUploaded = useCallback(
+    (uploadedUrls: string[]) => {
+      // 图片上传成功后，将新图片 URL 添加到 existingImages，清空 newImages
+      setExistingImages(prev => [...prev, ...uploadedUrls])
+      resetImages()
+    },
+    [resetImages]
+  )
+
+  // 草稿自动保存（仅新建模式启用）
+  const {
+    isSaving: isDraftSaving,
+    isDirty,
+    isOnline,
+    loadDraft,
+    saveDraftNow,
+    updateDraft,
+    clearDraft,
+  } = useDraftAutoSave({
+    enabled: !isEditMode,
+    onSaveSuccess: () => {
+      // 静默保存成功，不显示 toast
+    },
+    onSaveError: () => {
+      // 保存失败时会自动在恢复网络后重试
+    },
+    onImagesUploaded: handleImagesUploaded,
+  })
+
   // 创建/更新 mutation
   const { mutate: createPost, isPending: isCreating } = useCreatePost({
     onSuccess: () => {
+      // 发布成功后清除草稿
+      clearDraft()
       resetImages()
       setEditorContent('')
     },
@@ -75,6 +115,11 @@ const PostEditorPage = () => {
   })
 
   const isPending = isCreating || isUpdating
+
+  const form = useForm<PostFormData>({
+    resolver: zodResolver(postSchema),
+    defaultValues: { body: '', tags: '' },
+  })
 
   // 编辑模式下加载帖子数据
   useEffect(() => {
@@ -112,15 +157,53 @@ const PostEditorPage = () => {
     loadPost()
   }, [id, isEditMode, location.state, navigate])
 
+  // 新建模式下加载草稿（只在组件挂载时执行一次）
+  const draftLoadedRef = useRef(false)
+  useEffect(() => {
+    if (isEditMode || draftLoadedRef.current) return
+    draftLoadedRef.current = true
+
+    const initDraft = async () => {
+      try {
+        const savedDraft = await loadDraft()
+        if (savedDraft) {
+          // 恢复草稿内容
+          setEditorContent(savedDraft.body)
+          form.setValue('body', savedDraft.body)
+          if (savedDraft.tags) {
+            form.setValue('tags', savedDraft.tags)
+          }
+          // 恢复已上传的图片
+          if (savedDraft.uploadedImages?.length) {
+            setExistingImages(savedDraft.uploadedImages)
+          }
+          // 恢复本地保存的图片
+          if (savedDraft.localImages?.length) {
+            const restoredImages: SelectedImage[] = savedDraft.localImages.map(
+              img => ({
+                file: draftStorage.base64ToFile(img.base64, img.name, img.type),
+                previewUrl: img.base64,
+                width: img.width,
+                height: img.height,
+              })
+            )
+            setNewImages(restoredImages)
+          }
+          toast.info('已恢复草稿')
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    initDraft()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode])
+
   const handleEditorRef = (ref: RichTextEditorRef | null) => {
     editorRef.current = ref
     setEditorInstance(ref?.editor ?? null)
   }
-
-  const form = useForm<PostFormData>({
-    resolver: zodResolver(postSchema),
-    defaultValues: { body: '', tags: '' },
-  })
 
   // 编辑模式下，帖子加载后更新表单默认值
   useEffect(() => {
@@ -135,6 +218,46 @@ const PostEditorPage = () => {
   const removeExistingImage = (index: number) => {
     setExistingImages(prev => prev.filter((_, i) => i !== index))
   }
+
+  // 内容变化时触发草稿自动保存
+  const handleContentChange = useCallback(
+    (content: string) => {
+      setEditorContent(content)
+      if (!isEditMode) {
+        const tags = form.getValues('tags')
+        updateDraft({
+          body: content,
+          tags,
+          images: newImages,
+          existingImages,
+        })
+      }
+    },
+    [isEditMode, form, newImages, existingImages, updateDraft]
+  )
+
+  // 退出时保存草稿
+  const handleCancel = useCallback(async () => {
+    if (!isEditMode && (editorContent.trim() || newImages.length > 0)) {
+      // 立即保存草稿到本地和云端
+      await saveDraftNow({
+        body: editorContent,
+        tags: form.getValues('tags'),
+        images: newImages,
+        existingImages,
+      })
+      toast.success('草稿已保存')
+    }
+    navigate(-1)
+  }, [
+    isEditMode,
+    editorContent,
+    newImages,
+    existingImages,
+    form,
+    saveDraftNow,
+    navigate,
+  ])
 
   const onSubmit = (data: PostFormData) => {
     const textContent = htmlToText(editorContent)
@@ -164,6 +287,7 @@ const PostEditorPage = () => {
       createPost({
         data: postData,
         images: newImages,
+        existingImages, // 草稿中已上传的图片
       })
     }
   }
@@ -186,22 +310,23 @@ const PostEditorPage = () => {
         <Button
           type="button"
           variant="ghost"
-          onClick={() => navigate(-1)}
+          onClick={handleCancel}
           disabled={isPending}
         >
           取消
         </Button>
         <div className="flex gap-3">
-          {/* 新建模式下显示存草稿按钮 */}
+          {/* 网络状态和保存状态指示器 */}
           {!isEditMode && (
-            <Button
-              type="submit"
-              variant="secondary"
-              form={formId}
-              disabled={isPending}
-            >
-              存草稿
-            </Button>
+            <div className="flex items-center gap-1 text-xs text-gray-400">
+              {isOnline ? (
+                <Cloud className="w-3 h-3" />
+              ) : (
+                <CloudOff className="w-3 h-3 text-orange-400" />
+              )}
+              {isDraftSaving && <span>保存中...</span>}
+              {!isDraftSaving && isDirty && !isOnline && <span>待同步</span>}
+            </div>
           )}
           {/* 发布/保存按钮 */}
           <Button
@@ -241,7 +366,7 @@ const PostEditorPage = () => {
                         ref={handleEditorRef}
                         content={editorContent}
                         onChange={content => {
-                          setEditorContent(content)
+                          handleContentChange(content)
                           field.onChange(content)
                         }}
                         placeholder="分享你的想法"

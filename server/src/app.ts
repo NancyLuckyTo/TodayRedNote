@@ -8,6 +8,7 @@ import logger from 'morgan'
 import authRouter from './routes/auth.js'
 import uploadRouter from './routes/upload.js'
 import postsRouter from './routes/posts.js'
+import draftsRouter from './routes/drafts.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -26,6 +27,7 @@ app.use(express.static(path.resolve(__dirname, '../public')))
 app.use('/api/auth', authRouter)
 app.use('/api/upload', uploadRouter)
 app.use('/api/posts', postsRouter)
+app.use('/api/drafts', draftsRouter)
 
 app.get('/', (_req, res) => {
   res.json({ ok: true })

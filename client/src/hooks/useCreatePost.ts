@@ -17,16 +17,25 @@ export const useCreatePost = ({ onSuccess }: UseCreatePostProps = {}) => {
     mutationFn: async ({
       data,
       images,
+      existingImages = [],
     }: {
       data: PostFormData
       images: SelectedImage[]
+      existingImages?: string[] // 草稿中已上传的图片 URL
     }) => {
+      // 上传新图片
       const uploadedImages = await uploadImages(images)
+
+      // 合并已有图片和新上传的图片
+      const allImages = [
+        ...existingImages.map(url => ({ url, width: 0, height: 0 })),
+        ...uploadedImages,
+      ]
 
       const postRes = await api.post('/posts', {
         body: data.body,
         bodyPreview: data.bodyPreview,
-        images: uploadedImages,
+        images: allImages,
         tags: parseTags(data.tags),
       })
 
