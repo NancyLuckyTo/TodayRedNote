@@ -13,7 +13,7 @@ import LoginPage from './pages/LoginPage'
 import PrivateRoute from './components/PrivateRoute'
 import PostDetailPage from './pages/PostDetailPage'
 import { useAuthStore } from './store/auth'
-import { Toaster } from '@/components/ui/sonner'
+import { ToastProvider } from '@/components/ui/toast'
 
 function Layout() {
   const location = useLocation()
@@ -48,7 +48,7 @@ function Layout() {
       </Routes>
 
       {!hideBottomNav && <BottomNav />}
-      <Toaster richColors />
+      <ToastProvider position="top-center" />
     </div>
   )
 }

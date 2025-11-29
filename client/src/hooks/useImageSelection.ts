@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/components/ui/toast'
 
 const IMAGE_MAX_COUNT = 18
 const IMAGE_MAX_SIZE = 5 * 1024 * 1024
