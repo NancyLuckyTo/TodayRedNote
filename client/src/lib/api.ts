@@ -1,7 +1,8 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios'
 
+// 生产环境使用环境变量配置的 API 地址，开发环境使用 Vite 代理
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
 })
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {

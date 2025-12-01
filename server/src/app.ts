@@ -5,6 +5,7 @@ import express, { NextFunction, Request, Response } from 'express'
 import path from 'path'
 import cookieParser from 'cookie-parser'
 import logger from 'morgan'
+import cors from 'cors'
 import authRouter from './routes/auth.js'
 import uploadRouter from './routes/upload.js'
 import postsRouter from './routes/posts.js'
@@ -17,6 +18,17 @@ const app = express()
 
 app.set('views', path.resolve(__dirname, '../views'))
 app.set('view engine', 'jade')
+
+// CORS 配置 - 允许前端域名跨域访问
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN?.split(',') || [
+      'http://localhost:5173',
+      'http://localhost:4173',
+    ],
+    credentials: true,
+  })
+)
 
 app.use(logger('dev'))
 app.use(express.json())
