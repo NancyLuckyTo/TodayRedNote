@@ -188,7 +188,7 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
           )}
 
           {/* 标签 */}
-          {post.tags &&
+          {/* {post.tags &&
             post.tags.map(tag => (
               <span
                 key={tag._id}
@@ -196,7 +196,7 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
               >
                 {tag.name}
               </span>
-            ))}
+            ))} */}
         </div>
       )}
 
