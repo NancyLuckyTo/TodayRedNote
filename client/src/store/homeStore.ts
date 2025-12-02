@@ -76,11 +76,11 @@ export const useHomeStore = create<HomeState>((set, get) => ({
   },
   clearViewedPostIds: () => {
     try {
-      sessionStorage.removeItem(VIEWED_POSTS_KEY)
+      // sessionStorage.removeItem(VIEWED_POSTS_KEY)
     } catch {
       // ignore
     }
-    set({ viewedPostIds: [] })
+    // set({ viewedPostIds: [] })
   },
   reset: () =>
     set({
