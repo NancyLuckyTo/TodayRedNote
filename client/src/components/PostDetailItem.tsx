@@ -174,11 +174,17 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
       {((post.topic && post.topic.name) ||
         (post.tags && post.tags.length > 0)) && (
         <div className="px-6 pb-2 mt-2 flex flex-wrap gap-2">
-          {/* 话题 */}
+          {/* 话题 - 点击跳转到新建笔记页并自动填充话题 */}
           {post.topic && post.topic.name && (
-            <span className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-sm text-red-300">
+            <button
+              type="button"
+              onClick={() =>
+                navigate('/createPost', { state: { topic: post.topic!.name } })
+              }
+              className="inline-flex items-center rounded-full bg-secondary px-2.5 py-0.5 text-sm text-red-300"
+            >
               #{post.topic.name}
-            </span>
+            </button>
           )}
 
           {/* 标签 */}

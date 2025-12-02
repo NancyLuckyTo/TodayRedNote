@@ -9,8 +9,8 @@ export interface IDraft {
   cloudId?: string
   /** 正文内容（HTML 格式） */
   body: string
-  /** 标签字符串 */
-  tags?: string
+  /** 话题名称 */
+  topic?: string
   /** 已上传到云端的图片 URL 列表 */
   uploadedImages?: string[]
   /** 本地待上传图片的 base64 数据（用于断网恢复） */
@@ -37,7 +37,7 @@ export interface IDraft {
 export interface ICloudDraft {
   _id: string
   body: string
-  tags?: string
+  topic?: string
   images?: string[]
   createdAt: string
   updatedAt: string

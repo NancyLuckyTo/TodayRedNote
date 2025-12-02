@@ -58,7 +58,7 @@ export const draftStorage = {
     try {
       const payload = {
         body: draft.body,
-        tags: draft.tags,
+        topic: draft.topic,
         images: draft.uploadedImages || [],
       }
 

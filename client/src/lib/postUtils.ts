@@ -78,7 +78,7 @@ export const htmlToText = (html: string): string => {
 export interface PostFormData {
   body: string
   bodyPreview?: string
-  tags?: string
+  topic?: string
 }
 
 /** 已上传图片类型 */
@@ -91,7 +91,7 @@ export interface UploadedImage {
 /** 笔记表单验证 Schema */
 export const postSchema = z.object({
   body: z.string().min(1, '请输入内容').max(BODY_MAX_LENGTH, '内容过长'),
-  tags: z.string().optional(),
+  topic: z.string().optional(),
 })
 
 /** 解析标签字符串为数组 */

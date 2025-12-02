@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from '@/components/ui/toast'
 import api from '@/lib/api'
-import { uploadImages, parseTags, type PostFormData } from '@/lib/postUtils'
+import { uploadImages, type PostFormData } from '@/lib/postUtils'
 import type { SelectedImage } from './useImageSelection'
 
 interface UseCreatePostProps {
@@ -36,7 +36,7 @@ export const useCreatePost = ({ onSuccess }: UseCreatePostProps = {}) => {
         body: data.body,
         bodyPreview: data.bodyPreview,
         images: allImages,
-        tags: parseTags(data.tags),
+        topic: data.topic?.trim() || undefined,
       })
 
       return postRes.data

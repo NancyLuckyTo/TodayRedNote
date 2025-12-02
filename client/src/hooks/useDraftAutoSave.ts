@@ -8,7 +8,7 @@ const AUTO_SAVE_INTERVAL = 5000 // 5秒自动保存
 
 interface DraftContent {
   body: string
-  tags?: string
+  topic?: string
   images: SelectedImage[]
   existingImages?: string[]
 }
@@ -131,7 +131,7 @@ export const useDraftAutoSave = (
       const updatedDraft: IDraft = {
         ...currentDraft,
         body: content.body,
-        tags: content.tags,
+        topic: content.topic,
         uploadedImages: allUploadedImages,
         localImages: [], // 图片已上传，清空本地图片
         updatedAt: Date.now(),
@@ -188,7 +188,7 @@ export const useDraftAutoSave = (
       const updatedDraft: IDraft = {
         ...currentDraft,
         body: content.body,
-        tags: content.tags,
+        topic: content.topic,
         uploadedImages: content.existingImages || [],
         localImages,
         updatedAt: Date.now(),
@@ -227,7 +227,7 @@ export const useDraftAutoSave = (
           id: draftStorage.generateId(),
           cloudId: cloudDraft._id,
           body: cloudDraft.body,
-          tags: cloudDraft.tags,
+          topic: cloudDraft.topic,
           uploadedImages: cloudDraft.images || [],
           createdAt: new Date(cloudDraft.createdAt).getTime(),
           updatedAt: new Date(cloudDraft.updatedAt).getTime(),
@@ -345,7 +345,7 @@ export const useDraftAutoSave = (
         const updatedDraft: IDraft = {
           ...currentDraft,
           body: contentRef.current.body,
-          tags: contentRef.current.tags,
+          topic: contentRef.current.topic,
           updatedAt: Date.now(),
           isDirty: true,
         }

@@ -2,7 +2,7 @@ import Draft, { IDraft } from '../models/draftModel.js'
 
 interface DraftData {
   body: string
-  tags?: string
+  topic?: string
   images?: string[]
 }
 
@@ -25,7 +25,7 @@ class DraftService {
       {
         $set: {
           body: data.body,
-          tags: data.tags || '',
+          topic: data.topic || '',
           images: data.images || [],
         },
       },
@@ -51,7 +51,7 @@ class DraftService {
       {
         $set: {
           body: data.body,
-          tags: data.tags || '',
+          topic: data.topic || '',
           images: data.images || [],
         },
       },

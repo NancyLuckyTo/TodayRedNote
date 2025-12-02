@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/toast'
 import { Cloud, CloudOff } from 'lucide-react'
 import type { IPost } from '@today-red-note/types'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Form,
   FormControl,
@@ -118,8 +119,11 @@ const PostEditorPage = () => {
 
   const form = useForm<PostFormData>({
     resolver: zodResolver(postSchema),
-    defaultValues: { body: '', tags: '' },
+    defaultValues: { body: '', topic: '' },
   })
+
+  // 从路由 state 获取初始话题（点击话题跳转时传入）
+  const initialTopic = (location.state as { topic?: string } | null)?.topic
 
   // 编辑模式下加载帖子数据
   useEffect(() => {
@@ -170,8 +174,9 @@ const PostEditorPage = () => {
           // 恢复草稿内容
           setEditorContent(savedDraft.body)
           form.setValue('body', savedDraft.body)
-          if (savedDraft.tags) {
-            form.setValue('tags', savedDraft.tags)
+          // 恢复话题
+          if (savedDraft.topic) {
+            form.setValue('topic', savedDraft.topic)
           }
           // 恢复已上传的图片
           if (savedDraft.uploadedImages?.length) {
@@ -210,10 +215,17 @@ const PostEditorPage = () => {
     if (post) {
       form.reset({
         body: post.body,
-        tags: post.tags?.map(t => t.name).join(', ') || '',
+        topic: post.topic?.name || '',
       })
     }
   }, [post, form])
+
+  // 新建模式下，如果有初始话题则设置
+  useEffect(() => {
+    if (!isEditMode && initialTopic && !form.getValues('topic')) {
+      form.setValue('topic', initialTopic)
+    }
+  }, [isEditMode, initialTopic, form])
 
   const removeExistingImage = (index: number) => {
     setExistingImages(prev => prev.filter((_, i) => i !== index))
@@ -224,10 +236,10 @@ const PostEditorPage = () => {
     (content: string) => {
       setEditorContent(content)
       if (!isEditMode) {
-        const tags = form.getValues('tags')
+        const topic = form.getValues('topic')
         updateDraft({
           body: content,
-          tags,
+          topic,
           images: newImages,
           existingImages,
         })
@@ -242,7 +254,7 @@ const PostEditorPage = () => {
       // 立即保存草稿到本地和云端
       await saveDraftNow({
         body: editorContent,
-        tags: form.getValues('tags'),
+        topic: form.getValues('topic'),
         images: newImages,
         existingImages,
       })
@@ -390,6 +402,28 @@ const PostEditorPage = () => {
               triggerAdd={triggerFileInput}
               fileInputRef={fileInputRef}
               disabled={isPending}
+            />
+
+            {/* 话题输入 */}
+            <FormField
+              control={form.control}
+              name="topic"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <div className="flex items-center text-sm text-red-300">
+                      <span>#</span>
+                      <Input
+                        {...field}
+                        placeholder="添加话题（可选）"
+                        disabled={isPending}
+                        className="flex-1 border-none"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </form>
         </Form>

@@ -5,8 +5,8 @@ export interface IDraft extends Document {
   user: Types.ObjectId
   // 正文内容（HTML 格式）
   body: string
-  // 标签字符串
-  tags?: string
+  // 话题名称
+  topic?: string
   // 已上传的图片 URL 列表
   images: string[]
   createdAt: Date
@@ -22,7 +22,7 @@ const DraftSchema: Schema<IDraft> = new Schema<IDraft>(
       index: true,
     },
     body: { type: String, default: '' },
-    tags: { type: String, default: '' },
+    topic: { type: String, default: '' },
     images: { type: [String], default: [] },
   },
   { timestamps: true }

@@ -63,7 +63,7 @@ class PostService {
    * 创建笔记
    */
   async createPost(userId: string, data: any) {
-    const { body, bodyPreview, images } = data
+    const { body, bodyPreview, images, topic: userTopic } = data
 
     if (!body || !String(body).trim()) {
       throw new Error('Body are required')
@@ -79,10 +79,18 @@ class PostService {
 
     applyImagesToTarget(payload, images)
 
+    // 话题处理：优先使用用户手动传入的话题，否则 AI 自动提取
     try {
-      const topicName = await extractTopic(bodyStr)
-      const topic = await topicService.getOrCreateTopic(topicName)
-      payload.topic = topic._id
+      if (userTopic && typeof userTopic === 'string' && userTopic.trim()) {
+        // 用户手动输入话题
+        const topic = await topicService.getOrCreateTopic(userTopic.trim())
+        payload.topic = topic._id
+      } else {
+        // AI 自动提取话题
+        const topicName = await extractTopic(bodyStr)
+        const topic = await topicService.getOrCreateTopic(topicName)
+        payload.topic = topic._id
+      }
     } catch (error) {
       console.error('Topic generation failed:', error)
     }
@@ -190,7 +198,7 @@ class PostService {
       throw new Error('Forbidden')
     }
 
-    const { body, bodyPreview, images } = data
+    const { body, bodyPreview, images, topic: userTopic } = data
     const update: any = {}
 
     if (typeof body === 'string') {
@@ -201,6 +209,17 @@ class PostService {
 
     if (Array.isArray(images)) {
       applyImagesToTarget(update, images, { resetWhenEmpty: true })
+    }
+
+    // 更新话题：如果用户提供了话题则更新
+    if (typeof userTopic === 'string') {
+      if (userTopic.trim()) {
+        const topic = await topicService.getOrCreateTopic(userTopic.trim())
+        update.topic = topic._id
+      } else {
+        // 用户清空了话题
+        update.topic = null
+      }
     }
 
     return await Post.findByIdAndUpdate(id, update, { new: true })
