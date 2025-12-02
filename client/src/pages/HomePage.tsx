@@ -19,6 +19,8 @@ const HomePage = () => {
     setPosts,
     setPagination,
     setScrollPosition,
+    addViewedPostIds,
+    getExcludeIds,
   } = useHomeStore()
 
   const [isInitialLoading, setIsInitialLoading] = useState(false) // 首次加载状态
@@ -48,15 +50,27 @@ const HomePage = () => {
       }
 
       try {
+        // 获取需要排除的帖子 ID（已展示过的 + 当前展示的）
+        const excludeIds = getExcludeIds()
+
         const { data } = await api.get<PostsResponse>('/posts', {
           params: {
             cursor: cursor ?? undefined,
             limit: FETCH_LIMIT,
+            // 传递排除 ID，用于避免重复展示
+            excludeIds:
+              excludeIds.length > 0 ? excludeIds.join(',') : undefined,
           },
         })
 
         // 清洗数据
         const normalizedPosts = (data.posts ?? []).map(normalizePost)
+
+        // 记录本次获取的帖子 ID 到已浏览列表
+        const newPostIds = normalizedPosts.map(p => p._id)
+        if (newPostIds.length > 0) {
+          addViewedPostIds(newPostIds)
+        }
 
         if (!append) {
           setPosts(normalizedPosts)
@@ -92,7 +106,7 @@ const HomePage = () => {
         }
       }
     },
-    [setPagination, setPosts]
+    [setPagination, setPosts, addViewedPostIds, getExcludeIds]
   )
 
   // 初始化，组件挂载时请求第一页数

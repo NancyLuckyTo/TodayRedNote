@@ -14,6 +14,7 @@ import userProfileService from '../services/userProfileService.js'
 
 const MAX_RELATED_NOTES = 10 // 笔记详情页相关笔记最大数量
 const MAX_INTEREST_TAGS = 10 // 个性化推荐时使用的兴趣标签数量上限
+const MAX_EXCLUDE_IDS = 200 // 最大排除 ID 数量，防止查询过大
 
 class PostService {
   /**
@@ -36,8 +37,12 @@ class PostService {
   /**
    * 构建兜底流结果
    */
-  private async buildFallbackFeedResult(limit: number, cursor?: string) {
-    const baseResult = await this.getPosts(limit, cursor)
+  private async buildFallbackFeedResult(
+    limit: number,
+    cursor?: string,
+    excludeIds?: string[]
+  ) {
+    const baseResult = await this.getPosts(limit, cursor, excludeIds)
     const basePagination = baseResult.pagination ?? {
       nextCursor: null,
       hasNextPage: false,
@@ -264,9 +269,16 @@ class PostService {
 
   /**
    * 用于瀑布流首页获取笔记列表
+   * @param excludeIds 排除的笔记 ID 列表，用于避免重复展示
    */
-  async getPosts(limit: number, cursor?: string) {
+  async getPosts(limit: number, cursor?: string, excludeIds?: string[]) {
     let query: any = {}
+
+    // 排除已展示的笔记 ID
+    if (excludeIds && excludeIds.length > 0) {
+      const safeExcludeIds = excludeIds.slice(0, MAX_EXCLUDE_IDS)
+      query._id = { $nin: safeExcludeIds }
+    }
 
     if (cursor) {
       try {
@@ -276,14 +288,21 @@ class PostService {
         const cursorTime = new Date(decoded.createdAt)
         const cursorId = decoded._id
 
-        query = {
+        const cursorCondition = {
           $or: [
             { createdAt: { $lt: cursorTime } },
             { createdAt: cursorTime, _id: { $lt: cursorId } },
           ],
         }
+
+        // 合并 cursor 条件和 excludeIds 条件
+        if (query._id) {
+          query = { $and: [{ _id: query._id }, cursorCondition] }
+        } else {
+          query = cursorCondition
+        }
       } catch (err) {
-        query = {}
+        // cursor 解析失败，保持现有 query（可能包含 excludeIds）
       }
     }
 
@@ -383,8 +402,14 @@ class PostService {
 
   /**
    * 混合型个性化推荐信息流：先推荐用户画像匹配的笔记，如果余量不足则推荐时间流笔记
+   * @param excludeIds 排除的笔记 ID 列表，用于避免重复展示
    */
-  async getPersonalizedFeed(userId: string, limit: number, cursor?: string) {
+  async getPersonalizedFeed(
+    userId: string,
+    limit: number,
+    cursor?: string,
+    excludeIds?: string[]
+  ) {
     let phase: 'profile' | 'fallback' = 'profile'
     let profileCursorCreatedAt: Date | undefined // 用于在画像阶段进行数据库分页查询
     let profileCursorId: string | undefined
@@ -418,7 +443,11 @@ class PostService {
 
     // 兜底阶段：完全复用时间流逻辑
     if (phase === 'fallback') {
-      return this.buildFallbackFeedResult(limit, fallbackInnerCursor)
+      return this.buildFallbackFeedResult(
+        limit,
+        fallbackInnerCursor,
+        excludeIds
+      )
     }
 
     // 画像阶段：根据用户兴趣标签召回
@@ -436,13 +465,19 @@ class PostService {
 
     // 无兴趣标签，直接退化到兜底流
     if (!interestTagIds.length) {
-      return this.buildFallbackFeedResult(limit)
+      return this.buildFallbackFeedResult(limit, undefined, excludeIds)
     }
 
     // 执行数据库查询
     const query: any = {
       // 构造查询条件：笔记的 tags 字段必须包含用户的兴趣标签之一 ($in 查询)
       tags: { $in: interestTagIds },
+    }
+
+    // 排除已展示的笔记 ID
+    if (excludeIds && excludeIds.length > 0) {
+      const safeExcludeIds = excludeIds.slice(0, MAX_EXCLUDE_IDS)
+      query._id = { $nin: safeExcludeIds }
     }
 
     if (profileCursorCreatedAt && profileCursorId) {
@@ -474,7 +509,7 @@ class PostService {
 
     // 如果画像召回为空，直接进入兜底阶段
     if (!profilePosts.length) {
-      return this.buildFallbackFeedResult(limit)
+      return this.buildFallbackFeedResult(limit, undefined, excludeIds)
     }
 
     // 画像阶段还有下一页，则本次只返回画像数据
@@ -511,7 +546,11 @@ class PostService {
       })
     }
 
-    const fallbackResult = await this.getPosts(fallbackNeeded, undefined)
+    const fallbackResult = await this.getPosts(
+      fallbackNeeded,
+      undefined,
+      excludeIds
+    )
     const fallbackPagination = fallbackResult.pagination ?? {
       nextCursor: null,
       hasNextPage: false,

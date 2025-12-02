@@ -131,6 +131,17 @@ class PostController {
       const limit = parseInt(String(req.query.limit as string)) || FETCH_LIMIT
       const cursor = req.query.cursor as string | undefined
 
+      // 解析 excludeIds 参数，用于排除已展示的笔记
+      let excludeIds: string[] | undefined
+      const excludeIdsParam = req.query.excludeIds
+      if (typeof excludeIdsParam === 'string' && excludeIdsParam) {
+        excludeIds = excludeIdsParam.split(',').filter(Boolean)
+      } else if (Array.isArray(excludeIdsParam)) {
+        excludeIds = excludeIdsParam.filter(
+          (id): id is string => typeof id === 'string' && Boolean(id)
+        )
+      }
+
       let currentUserId: string | undefined
 
       const authHeader = req.headers.authorization || ''
@@ -150,8 +161,13 @@ class PostController {
       }
 
       const result = currentUserId
-        ? await postService.getPersonalizedFeed(currentUserId, limit, cursor)
-        : await postService.getPosts(limit, cursor)
+        ? await postService.getPersonalizedFeed(
+            currentUserId,
+            limit,
+            cursor,
+            excludeIds
+          )
+        : await postService.getPosts(limit, cursor, excludeIds)
 
       return res.json(result)
     } catch (err) {
