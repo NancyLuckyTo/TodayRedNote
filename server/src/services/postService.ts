@@ -137,60 +137,346 @@ class PostService {
   }
 
   /**
-   * 用于笔记详情页获取更多相关笔记
+   * 用于笔记详情页获取更多相关笔记（支持三阶段推荐：related -> profile -> fallback）
    */
-  async getRelatedPosts(id: string) {
+  async getRelatedPosts(
+    id: string,
+    userId?: string,
+    limit: number = MAX_RELATED_NOTES,
+    cursor?: string,
+    excludeIds?: string[]
+  ) {
     const currentPost = await Post.findById(id)
     if (!currentPost) return null
 
-    // 构建复杂推荐查询：优先标签匹配，其次话题匹配
-    const matchByTags =
-      currentPost.tags && currentPost.tags.length > 0
-        ? {
-            _id: { $ne: currentPost._id },
-            tags: { $in: currentPost.tags },
+    // 解析 cursor 确定当前阶段
+    let phase: 'related' | 'profile' | 'fallback' = 'related'
+    let relatedCursorCreatedAt: Date | undefined
+    let relatedCursorId: string | undefined
+    let profileCursorCreatedAt: Date | undefined
+    let profileCursorId: string | undefined
+    let fallbackInnerCursor: string | undefined
+
+    if (cursor) {
+      const decoded = decodeFeedCursor(cursor)
+      if (decoded) {
+        if (decoded.phase === 'related' && decoded.createdAt && decoded._id) {
+          phase = 'related'
+          relatedCursorCreatedAt = new Date(decoded.createdAt)
+          relatedCursorId = String(decoded._id)
+        } else if (decoded.phase === 'profile') {
+          phase = 'profile'
+          if (decoded.createdAt && decoded._id) {
+            profileCursorCreatedAt = new Date(decoded.createdAt)
+            profileCursorId = String(decoded._id)
           }
-        : null
-
-    const matchByTopic = currentPost.topic
-      ? {
-          _id: { $ne: currentPost._id },
-          topic: currentPost.topic,
-          // 排除已通过标签匹配的
-          ...(matchByTags ? { tags: { $nin: currentPost.tags } } : {}),
+        } else if (decoded.phase === 'fallback') {
+          phase = 'fallback'
+          if (typeof decoded.innerCursor === 'string') {
+            fallbackInnerCursor = decoded.innerCursor
+          }
         }
-      : null
+      }
+    }
 
-    // 分别获取标签匹配和话题匹配的笔记
-    const tagMatchedPosts = matchByTags
-      ? await Post.find(matchByTags)
-          .sort({ createdAt: -1 })
-          .limit(MAX_RELATED_NOTES)
-          .populate('author', 'username avatar')
-          .populate('topic', 'name')
-          .populate('tags', 'name')
-          .lean()
-      : []
+    // 确保当前笔记 ID 始终被排除
+    const safeExcludeIds = excludeIds
+      ? [...excludeIds.slice(0, MAX_EXCLUDE_IDS), id]
+      : [id]
 
-    const topicMatchedPosts = matchByTopic
-      ? await Post.find(matchByTopic)
-          .sort({ createdAt: -1 })
-          .limit(MAX_RELATED_NOTES - tagMatchedPosts.length)
-          .populate('author', 'username avatar')
-          .populate('topic', 'name')
-          .populate('tags', 'name')
-          .lean()
-      : []
+    // Phase: fallback - 兜底流
+    if (phase === 'fallback') {
+      return this.buildFallbackFeedResult(
+        limit,
+        fallbackInnerCursor,
+        safeExcludeIds
+      )
+    }
 
-    // 合并结果：标签匹配优先
-    const posts = [...tagMatchedPosts, ...topicMatchedPosts].slice(
-      0,
-      MAX_RELATED_NOTES
+    // Phase: profile - 用户画像推荐
+    if (phase === 'profile') {
+      return this.buildRelatedProfilePhase(
+        userId,
+        limit,
+        profileCursorCreatedAt,
+        profileCursorId,
+        safeExcludeIds
+      )
+    }
+
+    // Phase: related - 基于 tags/topic 的相关推荐
+    return this.buildRelatedPhase(
+      currentPost,
+      userId,
+      limit,
+      relatedCursorCreatedAt,
+      relatedCursorId,
+      safeExcludeIds
     )
+  }
 
-    return posts.map((post: any) =>
+  /**
+   * 构建 related 阶段结果（基于 tags/topic）
+   */
+  private async buildRelatedPhase(
+    currentPost: any,
+    userId: string | undefined,
+    limit: number,
+    cursorCreatedAt?: Date,
+    cursorId?: string,
+    excludeIds?: string[]
+  ) {
+    // 构建查询条件
+    const query: any = {
+      _id: { $nin: excludeIds || [] },
+      $or: [] as any[],
+    }
+
+    // 标签匹配条件
+    if (currentPost.tags && currentPost.tags.length > 0) {
+      query.$or.push({ tags: { $in: currentPost.tags } })
+    }
+    // 话题匹配条件
+    if (currentPost.topic) {
+      query.$or.push({ topic: currentPost.topic })
+    }
+
+    // 如果没有 tags 也没有 topic，直接进入画像阶段
+    if (query.$or.length === 0) {
+      return this.buildRelatedProfilePhase(
+        userId,
+        limit,
+        undefined,
+        undefined,
+        excludeIds
+      )
+    }
+
+    // cursor 分页条件
+    if (cursorCreatedAt && cursorId) {
+      query.$and = [
+        { $or: query.$or },
+        {
+          $or: [
+            { createdAt: { $lt: cursorCreatedAt } },
+            { createdAt: cursorCreatedAt, _id: { $lt: cursorId } },
+          ],
+        },
+      ]
+      delete query.$or
+    }
+
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .populate('author', 'username avatar')
+      .populate('topic', 'name')
+      .populate('tags', 'name')
+      .lean()
+
+    const hasMoreRelated = posts.length > limit
+    if (hasMoreRelated) {
+      posts.pop()
+    }
+
+    const formattedPosts = posts.map((post: any) =>
       formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
     )
+
+    // related 阶段还有数据
+    if (hasMoreRelated && formattedPosts.length > 0) {
+      const lastPost = formattedPosts[formattedPosts.length - 1]
+      const nextCursor = encodeCursor({
+        phase: 'related',
+        createdAt: lastPost.createdAt,
+        _id: lastPost._id,
+      })
+      return this.buildPaginationResult(formattedPosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    // related 阶段数据不足，需要用 profile/fallback 补充
+    const remainingNeeded = limit - formattedPosts.length
+
+    if (remainingNeeded <= 0) {
+      // 刚好满页，下一页切换到 profile 阶段
+      const nextCursor = encodeCursor({ phase: 'profile' })
+      return this.buildPaginationResult(formattedPosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    // 需要从 profile/fallback 补充
+    const existingIds = new Set(formattedPosts.map((p: any) => String(p._id)))
+    const profileExcludeIds = [
+      ...(excludeIds || []),
+      ...Array.from(existingIds),
+    ]
+
+    const supplementResult = await this.buildRelatedProfilePhase(
+      userId,
+      remainingNeeded,
+      undefined,
+      undefined,
+      profileExcludeIds
+    )
+
+    // 去重合并
+    const dedupSupplementPosts = supplementResult.posts.filter(
+      (p: any) => !existingIds.has(String(p._id))
+    )
+    const combinedPosts = [...formattedPosts, ...dedupSupplementPosts]
+
+    // 构建下一页 cursor
+    let nextCursor: string | null = null
+    if (
+      supplementResult.pagination?.hasNextPage &&
+      supplementResult.pagination?.nextCursor
+    ) {
+      nextCursor = supplementResult.pagination.nextCursor
+    } else if (dedupSupplementPosts.length > 0) {
+      // supplement 已结束但有数据，检查是否还有 fallback
+      nextCursor = encodeCursor({ phase: 'fallback' })
+    }
+
+    return this.buildPaginationResult(combinedPosts, {
+      nextCursor,
+      hasNextPage: Boolean(nextCursor),
+      limit,
+    })
+  }
+
+  /**
+   * 构建 profile 阶段结果（基于用户画像）
+   */
+  private async buildRelatedProfilePhase(
+    userId: string | undefined,
+    limit: number,
+    cursorCreatedAt?: Date,
+    cursorId?: string,
+    excludeIds?: string[]
+  ) {
+    // 无用户登录，直接进入兜底流
+    if (!userId) {
+      return this.buildFallbackFeedResult(limit, undefined, excludeIds)
+    }
+
+    const profile = await userProfileService.getOrCreateUserProfile(userId)
+
+    // 提取用户感兴趣的标签
+    const sortedInterests = Array.isArray(profile.interests)
+      ? [...profile.interests].sort((a: any, b: any) => b.weight - a.weight)
+      : []
+
+    const interestTagIds = sortedInterests
+      .slice(0, MAX_INTEREST_TAGS)
+      .map((item: any) => item.tagId)
+
+    // 无兴趣标签，直接进入兜底流
+    if (!interestTagIds.length) {
+      return this.buildFallbackFeedResult(limit, undefined, excludeIds)
+    }
+
+    // 构建查询
+    const query: any = {
+      tags: { $in: interestTagIds },
+    }
+
+    if (excludeIds && excludeIds.length > 0) {
+      query._id = { $nin: excludeIds.slice(0, MAX_EXCLUDE_IDS) }
+    }
+
+    if (cursorCreatedAt && cursorId) {
+      query.$or = [
+        { createdAt: { $lt: cursorCreatedAt } },
+        { createdAt: cursorCreatedAt, _id: { $lt: cursorId } },
+      ]
+    }
+
+    const posts = await Post.find(query)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit + 1)
+      .populate('author', 'username avatar')
+      .populate('topic', 'name')
+      .populate('tags', 'name')
+      .lean()
+
+    const hasMoreProfile = posts.length > limit
+    if (hasMoreProfile) {
+      posts.pop()
+    }
+
+    const formattedPosts = posts.map((post: any) =>
+      formatPostWithImages(post, IMAGE_QUALITY.THUMBNAIL, true)
+    )
+
+    // profile 数据为空，直接进入 fallback
+    if (!formattedPosts.length) {
+      return this.buildFallbackFeedResult(limit, undefined, excludeIds)
+    }
+
+    // profile 还有数据
+    if (hasMoreProfile) {
+      const lastPost = formattedPosts[formattedPosts.length - 1]
+      const nextCursor = encodeCursor({
+        phase: 'profile',
+        createdAt: lastPost.createdAt,
+        _id: lastPost._id,
+      })
+      return this.buildPaginationResult(formattedPosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    // profile 数据不足，用 fallback 补充
+    const remainingNeeded = limit - formattedPosts.length
+
+    if (remainingNeeded <= 0) {
+      const nextCursor = encodeCursor({ phase: 'fallback' })
+      return this.buildPaginationResult(formattedPosts, {
+        nextCursor,
+        hasNextPage: true,
+        limit,
+      })
+    }
+
+    const existingIds = new Set(formattedPosts.map((p: any) => String(p._id)))
+    const fallbackExcludeIds = [
+      ...(excludeIds || []),
+      ...Array.from(existingIds),
+    ]
+
+    const fallbackResult = await this.buildFallbackFeedResult(
+      remainingNeeded,
+      undefined,
+      fallbackExcludeIds
+    )
+
+    const dedupFallbackPosts = fallbackResult.posts.filter(
+      (p: any) => !existingIds.has(String(p._id))
+    )
+    const combinedPosts = [...formattedPosts, ...dedupFallbackPosts]
+
+    let nextCursor: string | null = null
+    if (
+      fallbackResult.pagination?.hasNextPage &&
+      fallbackResult.pagination?.nextCursor
+    ) {
+      nextCursor = fallbackResult.pagination.nextCursor
+    }
+
+    return this.buildPaginationResult(combinedPosts, {
+      nextCursor,
+      hasNextPage: Boolean(nextCursor),
+      limit,
+    })
   }
 
   /**

@@ -67,15 +67,53 @@ class PostController {
   }
 
   /**
-   * 获取相关笔记
+   * 获取相关笔记（支持三阶段推荐：related -> profile -> fallback）
    */
   async getRelated(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params
-      const posts = await postService.getRelatedPosts(id)
-      if (!posts) return res.status(404).json({ message: 'Not found' })
+      const limit = parseInt(String(req.query.limit)) || FETCH_LIMIT
+      const cursor = req.query.cursor as string | undefined
 
-      return res.json({ posts })
+      // 解析 excludeIds 参数
+      let excludeIds: string[] | undefined
+      const excludeIdsParam = req.query.excludeIds
+      if (typeof excludeIdsParam === 'string' && excludeIdsParam) {
+        excludeIds = excludeIdsParam.split(',').filter(Boolean)
+      } else if (Array.isArray(excludeIdsParam)) {
+        excludeIds = excludeIdsParam.filter(
+          (eid): eid is string => typeof eid === 'string' && Boolean(eid)
+        )
+      }
+
+      // 尝试从 token 中提取 userId（用于个性化推荐）
+      let currentUserId: string | undefined
+      const authHeader = req.headers.authorization || ''
+      if (authHeader.startsWith('Bearer ')) {
+        const token = authHeader.slice(7)
+        try {
+          const decoded: any = jwt.verify(
+            token,
+            process.env.JWT_SECRET || 'secret'
+          )
+          if (decoded && decoded.userId) {
+            currentUserId = decoded.userId
+          }
+        } catch (e) {
+          // token 无效则忽略
+        }
+      }
+
+      const result = await postService.getRelatedPosts(
+        id,
+        currentUserId,
+        limit,
+        cursor,
+        excludeIds
+      )
+      if (!result) return res.status(404).json({ message: 'Not found' })
+
+      return res.json(result)
     } catch (err) {
       next(err)
     }

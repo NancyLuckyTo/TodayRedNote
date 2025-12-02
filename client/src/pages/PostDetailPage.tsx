@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { normalizePost } from '@/lib/postUtils'
 import type { IPost } from '@today-red-note/types'
+import type { PostsResponse } from '@/types/posts'
 import { PostDetailItem } from '@/components/PostDetailItem'
 
-const ROOT_MARGIN_VALUE = '250px'
+const ROOT_MARGIN_VALUE = '1000px'
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>() // 获取 URL 参数
@@ -29,17 +30,35 @@ export default function PostDetailPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [shouldLoadRelated, setShouldLoadRelated] = useState(false)
 
+  // 分页相关状态
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [hasNextPage, setHasNextPage] = useState(true)
+  const viewedPostIdsRef = useRef<Set<string>>(new Set())
+
   /**
-   * 加载更多相关笔记
+   * 加载更多相关笔记（支持三阶段推荐：related -> profile -> fallback）
    */
   const loadMoreRelatedPosts = useCallback(async () => {
-    if (disableRecommendations || isLoadingMore || !id) return
+    if (disableRecommendations || isLoadingMore || !id || !hasNextPage) return
 
     try {
       setIsLoadingMore(true)
-      // 获取相关笔记
-      const { data } = await api.get(`/posts/${id}/related`)
-      const newPosts = data.posts.map(normalizePost)
+
+      // 构建 excludeIds 参数（排除已展示的笔记）
+      const excludeIds = Array.from(viewedPostIdsRef.current)
+
+      // 获取相关笔记（支持分页）
+      const { data } = await api.get<PostsResponse>(`/posts/${id}/related`, {
+        params: {
+          cursor: nextCursor ?? undefined,
+          excludeIds: excludeIds.length > 0 ? excludeIds.join(',') : undefined,
+        },
+      })
+
+      const newPosts = (data.posts ?? []).map(normalizePost)
+
+      // 记录本次获取的笔记 ID
+      newPosts.forEach((p: IPost) => viewedPostIdsRef.current.add(p._id))
 
       // 过滤掉已存在的笔记
       setPosts(prev => {
@@ -49,12 +68,16 @@ export default function PostDetailPage() {
         )
         return [...prev, ...uniqueNewPosts]
       })
+
+      // 更新分页状态
+      setNextCursor(data.pagination?.nextCursor ?? null)
+      setHasNextPage(Boolean(data.pagination?.hasNextPage))
     } catch (err) {
       console.error('Failed to load related posts:', err)
     } finally {
       setIsLoadingMore(false)
     }
-  }, [disableRecommendations, isLoadingMore, id])
+  }, [disableRecommendations, isLoadingMore, id, hasNextPage, nextCursor])
 
   // 初始加载
   useEffect(() => {
@@ -63,13 +86,18 @@ export default function PostDetailPage() {
 
       try {
         setLoading(true)
-        // 清空之前的列表，避免闪烁
+        // 清空之前的列表和分页状态，避免闪烁
         setPosts([])
         setShouldLoadRelated(false)
+        setNextCursor(null)
+        setHasNextPage(true)
+        viewedPostIdsRef.current.clear()
 
         const { data } = await api.get<{ post: IPost }>(`/posts/${id}`)
         const normalizedPost = normalizePost(data.post)
         setPosts([normalizedPost])
+        // 记录当前笔记 ID
+        viewedPostIdsRef.current.add(normalizedPost._id)
 
         // 触发加载相关推荐
         if (!disableRecommendations) {
@@ -98,11 +126,11 @@ export default function PostDetailPage() {
    * 监听滚动到底部
    */
   useEffect(() => {
-    if (disableRecommendations) return
+    if (disableRecommendations || !hasNextPage) return
 
     const observer = new IntersectionObserver(
       entries => {
-        if (entries[0].isIntersecting && !loading && !error) {
+        if (entries[0].isIntersecting && !loading && !error && hasNextPage) {
           loadMoreRelatedPosts()
         }
       },
@@ -114,7 +142,13 @@ export default function PostDetailPage() {
     }
 
     return () => observer.disconnect()
-  }, [disableRecommendations, loadMoreRelatedPosts, loading, error])
+  }, [
+    disableRecommendations,
+    loadMoreRelatedPosts,
+    loading,
+    error,
+    hasNextPage,
+  ])
 
   // 加载中
   if (loading) {
@@ -180,7 +214,12 @@ export default function PostDetailPage() {
           ref={observerTarget}
           className="flex h-10 items-center justify-center py-4"
         >
-          {isLoadingMore && <Spinner className="h-6 w-6" />}
+          {isLoadingMore && <Spinner className="h-4 w-4" />}
+          {!hasNextPage && posts.length > 1 && (
+            <span className="text-xs text-muted-foreground">
+              没有更多内容了
+            </span>
+          )}
         </div>
       </main>
     </div>
