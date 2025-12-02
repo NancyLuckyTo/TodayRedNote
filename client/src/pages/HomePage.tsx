@@ -2,11 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { WaterfallContainer } from '../components/WaterfallContainer'
 import { PostCard } from '../components/PostCard'
+import { PullToRefreshIndicator } from '@/components/PullToRefreshIndicator'
 import api from '@/lib/api'
 import type { PostsResponse } from '@/types/posts'
 import { calculatePostHeight, normalizePost } from '@/lib/postUtils'
 import { Spinner } from '@/components/ui/spinner'
 import { useHomeStore } from '@/store/homeStore'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { ROOT_MARGIN_VALUE } from '@/constants/post'
 import { FETCH_LIMIT, PRIORITY_LIMIT } from '@today-red-note/types'
 
@@ -21,6 +23,7 @@ const HomePage = () => {
     setScrollPosition,
     addViewedPostIds,
     getExcludeIds,
+    clearViewedPostIds,
   } = useHomeStore()
 
   const [isInitialLoading, setIsInitialLoading] = useState(false) // 首次加载状态
@@ -118,6 +121,8 @@ const HomePage = () => {
 
   // 滚动容器 ref
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  // 下拉刷新指示器 ref
+  const indicatorRef = useRef<HTMLDivElement>(null)
 
   // 恢复滚动位置
   useEffect(() => {
@@ -151,10 +156,20 @@ const HomePage = () => {
   /**
    * 下拉刷新
    */
-  // const handleRefresh = useCallback(() => {
-  //   if (isInitialLoading) return
-  //   fetchPosts()
-  // }, [fetchPosts, isInitialLoading])
+  const handleRefresh = useCallback(async () => {
+    if (isInitialLoading) return
+    // 清空已浏览记录，获取全新内容
+    clearViewedPostIds()
+    await fetchPosts()
+  }, [fetchPosts, isInitialLoading, clearViewedPostIds])
+
+  // 下拉刷新 Hook
+  const { state: pullState } = usePullToRefresh({
+    containerRef: scrollContainerRef,
+    indicatorRef,
+    onRefresh: handleRefresh,
+    disabled: isInitialLoading,
+  })
 
   /**
    * 加载更多
@@ -207,6 +222,9 @@ const HomePage = () => {
         className="flex-1 overflow-y-auto pb-20"
         onScroll={handleScroll}
       >
+        {/* 下拉刷新指示器 */}
+        <PullToRefreshIndicator ref={indicatorRef} state={pullState} />
+
         {isInitialLoading && !posts.length ? (
           <div className="flex justify-center items-center py-10">
             <Spinner />

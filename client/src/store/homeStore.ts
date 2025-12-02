@@ -34,12 +34,13 @@ interface HomeState {
   nextCursor: string | null
   hasNextPage: boolean
   scrollPosition: number
-  viewedPostIds: string[] // 已浏览的帖子 ID，用于去重
-  setPosts: (posts: IPost[] | ((prev: IPost[]) => IPost[])) => void
-  setPagination: (nextCursor: string | null, hasNextPage: boolean) => void
-  setScrollPosition: (position: number) => void
-  addViewedPostIds: (ids: string[]) => void
+  viewedPostIds: string[] // 已浏览的笔记 ID，用于去重
+  setPosts: (posts: IPost[] | ((prev: IPost[]) => IPost[])) => void // 设置笔记列表
+  setPagination: (nextCursor: string | null, hasNextPage: boolean) => void // 设置分页信息
+  setScrollPosition: (position: number) => void // 记录滚动位置
+  addViewedPostIds: (ids: string[]) => void // 添加已浏览的笔记 ID
   getExcludeIds: () => string[] // 获取需要排除的 ID（当前展示的 + 已浏览的）
+  clearViewedPostIds: () => void // 清空已浏览 ID（用于下拉刷新）
   reset: () => void
 }
 
@@ -58,7 +59,7 @@ export const useHomeStore = create<HomeState>((set, get) => ({
   addViewedPostIds: ids => {
     set(state => {
       const existingSet = new Set(state.viewedPostIds)
-      const newIds = ids.filter(id => !existingSet.has(id))
+      const newIds = ids.filter(id => !existingSet.has(id)) // 过滤掉已经存在的 ID
       if (newIds.length === 0) return state
 
       const updatedIds = [...state.viewedPostIds, ...newIds]
@@ -72,6 +73,14 @@ export const useHomeStore = create<HomeState>((set, get) => ({
     const currentPostIds = state.posts.map(p => p._id)
     const allIds = new Set([...state.viewedPostIds, ...currentPostIds])
     return Array.from(allIds)
+  },
+  clearViewedPostIds: () => {
+    try {
+      sessionStorage.removeItem(VIEWED_POSTS_KEY)
+    } catch {
+      // ignore
+    }
+    set({ viewedPostIds: [] })
   },
   reset: () =>
     set({
