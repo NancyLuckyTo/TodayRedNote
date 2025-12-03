@@ -1,26 +1,28 @@
 # 项目总览：TodayRedNote (今日红书)
 
-**TodayRedNote** 是一个**移动端优先 (Mobile-First)** 的现代化全栈资讯流 Web 应用。该项目采用 **Monorepo** 架构，整合 **AI 大模型** 能力，旨在打造一个高性能、高可用、体验丝滑的内容分享平台。
+**TodayRedNote** 是一个**移动端优先 (Mobile-First)** 的现代化全栈资讯流 Web 应用。该项目采用 **Monorepo** 架构，整合 **AI 大模型** 能力，旨在打造一个高性能、高可用、体验丝滑、个性推荐的内容分享平台。
 
-### 技术栈架构 (The Tech Stack)
+### 技术栈架构
 
 该项目采用 **TypeScript 全栈开发**，统一前后端语言规范，并使用 **pnpm Monorepo** 进行高效的依赖管理与代码共享。
 
 - **前端 (Client):**
-  - **Core:** `React 19` + `Vite` + `TypeScript` + `react-router-dom`
-  - **UI Framework:** `TailwindCSS v4` (样式引擎) + **`shadcn-ui`** (高定制化组件库)
-  - **State Management:**
-    - **Client State:** `Zustand` (管理 Auth、Token、User，含持久化)
-    - **Server State:** **`@tanstack/react-query`** (管理 Feed 流缓存、突变、无限加载)
-  - **Performance:** TODO
-  - **Editor:** `@tiptap/react` (无头富文本编辑器)
+  - **核心:** `React 19` + `Vite` + `TypeScript` + `react-router-dom`
+  - **UI:** `TailwindCSS v4` (样式引擎) + **`shadcn-ui`** (高定制化组件库)
+  - **状态管理:**
+    - **Client 状态:** `Zustand` (管理 Auth、Token、User，含持久化)
+    - **Server 状态:** **`@tanstack/react-query`** (管理 Feed 流缓存、突变、无限加载)
+  - **性能:** TODO
+  - **编辑器:** `@tiptap/react` (富文本编辑器)
+  - **Vercel 部署**
 
-- **后端 (Server / API):**
-  - **Runtime:** `Node.js` + `Express` (适配 Serverless 环境)
-  - **Database:** **MongoDB Atlas** (Mongoose ODM) - 云原生 NoSQL 数据库
-  - **Storage:** **Ali-OSS** (阿里云对象存储) - 采用后端签名、前端直传策略
-  - **Security:** `jsonwebtoken` (JWT 鉴权), `bcryptjs` (密码哈希)
+- **后端 (Server):**
+  - **运行环境:** `Node.js` + `Express` (适配 Serverless 环境)
+  - **数据库:** **MongoDB Atlas** (Mongoose ODM) - 云原生 NoSQL 数据库
+  - **存储:** **Ali-OSS** (阿里云对象存储) - 采用后端签名、前端直传策略
+  - **安全性:** `jsonwebtoken` (JWT 鉴权), `bcryptjs` (密码哈希)
   - **AI:** 通义千问 SDK (内容分析与推荐)
+  - **Railway 部署**
 
 ---
 
@@ -37,7 +39,7 @@
 - **预签名 URL 机制：** 后端通过 `Ali-OSS` SDK 签发临时的 `PUT` 权限 URL。
 - **前端直传：** 前端直接将文件流上传至阿里云 OSS，**彻底绕过后端服务器**，节省服务器带宽与计算资源，支持秒传与高并发。
 
-#### 3. 全生命周期内容管理
+#### 3. 内容管理
 
 - **发布：** 支持多图/封面图上传，支持富文本内容。
 - **查看：** 详情页展示作者信息、发布时间（相对时间格式化）、内容及相关推荐。
@@ -46,13 +48,14 @@
 
 #### 4. AI 驱动的内容增强
 
-- **智能打标：** 帖子发布后，后端异步调用 **LLM (大语言模型)**，根据正文内容自动提取 **话题** 与 3-5 个精准关键词（Tags），无需人工干预。
-- **相关推荐：** 基于 AI 生成的标签，在详情页底部通过 MongoDB 聚合查询，智能推荐具有相同标签的“相关话题”内容，提升用户留存。
+- **智能打标：** 帖子发布后，后端异步调用 **LLM (大语言模型)**，根据正文内容自动提取 **话题** 与 3-5 个精准关键词（Tags）；话题可手动输入。
+- **首页瀑布流：** 结合用户画像进行个性化推荐 + 信息流兜底
+- **笔记详情页相关推荐：** 基于 AI 生成的标签，在详情页底部通过 MongoDB 聚合查询，智能推荐具有相同标签的“相关话题”内容，提升用户留存。同时，结合个性化推荐 + 信息流兜底。
 
-#### 5. 极致性能优化
+#### 5. 性能优化
 
 - **LCP 优化 (Largest Contentful Paint):**
-  - 利用 Ali-OSS 的 **x-oss-process** 参数，动态请求 WebP/AVIF 格式及自适应尺寸的图片，显著降低带宽消耗。
+  - 利用 Ali-OSS 的 **x-oss-process** 参数，动态请求 WebP 格式及自适应尺寸的图片，显著降低带宽消耗。
   - 首屏图片添加 `fetchpriority="high"` 属性。
 - **虚拟滚动 (Virtual Scrolling):** TODO
 - **代码分割：** 路由级懒加载，减小首屏 Bundle 体积。
