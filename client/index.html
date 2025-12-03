@@ -5,16 +5,16 @@
     <!-- 预连接 CDN 域名，减少图片请求延迟 -->
     <link rel="preconnect" href="https://img.todayrednote.top" crossorigin />
     <link rel="dns-prefetch" href="https://img.todayrednote.top" />
-    <!-- 预连接 API 服务器，减少首次 API 请求延迟 -->
-    <link
-      rel="preconnect"
-      href="https://server-production-339f.up.railway.app"
-      crossorigin
-    />
-    <link
-      rel="dns-prefetch"
-      href="https://server-production-339f.up.railway.app"
-    />
+
+    <!-- API 数据预取：移至 Head 顶部，确保最早开始请求 -->
+    <script>
+      // 预取首屏帖子数据，存储到 window 对象供 React 使用
+      // 放在 Head 中以并行于 CSS/JS 加载和 Body 解析
+      window.__PREFETCH_POSTS__ = fetch('/api/posts?limit=12')
+        .then(res => res.json())
+        .catch(() => null)
+    </script>
+
     <link rel="icon" type="image/svg+xml" href="/src/assets/images/logo.svg" />
     <meta
       name="viewport"
