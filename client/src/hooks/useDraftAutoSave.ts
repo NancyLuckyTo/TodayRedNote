@@ -139,9 +139,10 @@ export const useDraftAutoSave = (
       // 收集所有已上传的图片 URL
       let allUploadedImages = [...(content.existingImages || [])]
 
-      // 如果有新图片，先上传到云端
+      // 如果有新图片，先上传到云端（使用 PREVIEW 质量，确保发布时画质）
       if (content.images.length > 0) {
         try {
+          // uploadImages 默认使用 PREVIEW 质量
           const uploadedResults = await uploadImages(content.images)
           const newImageUrls = uploadedResults.map(img => img.url)
           allUploadedImages = [...allUploadedImages, ...newImageUrls]
@@ -192,9 +193,9 @@ export const useDraftAutoSave = (
     syncToCloudRef.current = syncToCloud
   }, [syncToCloud])
 
-  // 保存到本地（包含图片的 base64）
+  // 保存到本地（仅保存文本和已上传图片 URL，不保存未上传的图片）
   const saveToLocal = useCallback(
-    async (content: DraftContent) => {
+    (content: DraftContent) => {
       const isEmpty = isEditorContentEmpty(content)
 
       // 如果内容为空，清除本地草稿
@@ -212,23 +213,13 @@ export const useDraftAutoSave = (
         updatedAt: Date.now(),
       }
 
-      // 将新图片转换为 base64 保存到本地
-      const localImages = await Promise.all(
-        content.images.map(async img => ({
-          base64: await draftStorage.fileToBase64(img.file),
-          name: img.file.name,
-          type: img.file.type,
-          width: img.width,
-          height: img.height,
-        }))
-      )
-
+      // 离线时只保存文本和已上传的图片 URL，不保存未上传的图片
       const updatedDraft: IDraft = {
         ...currentDraft,
         body: content.body,
         topic: content.topic,
         uploadedImages: content.existingImages || [],
-        localImages,
+        localImages: [],
         updatedAt: Date.now(),
         isDirty: true,
       }
@@ -309,12 +300,13 @@ export const useDraftAutoSave = (
 
         setIsSaving(true)
         try {
-          // 先保存到本地
-          await saveToLocal(contentRef.current)
-
-          // 如果在线，同步到云端
+          // 如果在线，优先同步到云端（上传图片获取 URL）
           if (draftStorage.isOnline()) {
             await syncToCloud(contentRef.current)
+            // syncToCloud 内部已经调用了 saveLocal
+          } else {
+            // 离线时保存到本地
+            await saveToLocal(contentRef.current)
           }
         } finally {
           setIsSaving(false)
@@ -335,12 +327,12 @@ export const useDraftAutoSave = (
 
       setIsSaving(true)
       try {
-        // 保存到本地
-        await saveToLocal(content)
-
-        // 如果在线，同步到云端
+        // 如果在线，优先同步到云端（上传图片获取 URL）
         if (draftStorage.isOnline()) {
           await syncToCloud(content)
+        } else {
+          // 离线时保存到本地（包含 base64 图片）
+          await saveToLocal(content)
         }
       } finally {
         setIsSaving(false)

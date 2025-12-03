@@ -44,17 +44,19 @@ export const draftStorage = {
   /**
    * 保存草稿到本地存储
    */
-  saveLocal(draft: IDraft): void {
+  saveLocal(draft: IDraft): boolean {
     // 如果是空草稿，不保存，直接清除本地存储
     if (isStoredDraftEmpty(draft)) {
       this.clearLocal()
-      return
+      return true
     }
 
     try {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
+      return true
     } catch (error) {
       console.error('保存草稿到本地失败:', error)
+      return false
     }
   },
 
@@ -173,31 +175,5 @@ export const draftStorage = {
    */
   isOnline(): boolean {
     return navigator.onLine
-  },
-
-  /**
-   * 将图片文件转换为 base64（用于断网时本地保存）
-   */
-  async fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  },
-
-  /**
-   * 将 base64 转换回 File 对象
-   */
-  base64ToFile(base64: string, name: string, type: string): File {
-    const arr = base64.split(',')
-    const bstr = atob(arr[1])
-    let n = bstr.length
-    const u8arr = new Uint8Array(n)
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n)
-    }
-    return new File([u8arr], name, { type })
   },
 }

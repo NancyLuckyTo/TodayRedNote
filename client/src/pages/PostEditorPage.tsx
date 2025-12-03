@@ -16,10 +16,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Spinner } from '@/components/ui/spinner'
-import {
-  useImageSelection,
-  type SelectedImage,
-} from '@/hooks/useImageSelection'
+import { useImageSelection } from '@/hooks/useImageSelection'
 import { useCreatePost } from '@/hooks/useCreatePost'
 import { useUpdatePost } from '@/hooks/useUpdatePost'
 import {
@@ -34,7 +31,6 @@ import {
 import { RichTextToolbar } from '@/components/create-post/RichTextToolbar'
 import { useKeyboardPosition } from '@/hooks/useKeyboardPosition'
 import { htmlToText, postSchema, type PostFormData } from '@/lib/postUtils'
-import { draftStorage } from '@/lib/draftStorage'
 import api from '@/lib/api'
 import { BODY_MAX_LENGTH, BODY_PREVIEW_MAX_LENGTH } from '@/constants/post'
 
@@ -63,7 +59,6 @@ const PostEditorPage = () => {
   // 新上传的图片
   const {
     images: newImages,
-    setImages: setNewImages,
     fileInputRef,
     handleFilesSelected,
     removeImageAt,
@@ -184,18 +179,6 @@ const PostEditorPage = () => {
           // 恢复已上传的图片
           if (savedDraft.uploadedImages?.length) {
             setExistingImages(savedDraft.uploadedImages)
-          }
-          // 恢复本地保存的图片
-          if (savedDraft.localImages?.length) {
-            const restoredImages: SelectedImage[] = savedDraft.localImages.map(
-              img => ({
-                file: draftStorage.base64ToFile(img.base64, img.name, img.type),
-                previewUrl: img.base64,
-                width: img.width,
-                height: img.height,
-              })
-            )
-            setNewImages(restoredImages)
           }
           toast.info('已恢复草稿')
         }
@@ -414,6 +397,7 @@ const PostEditorPage = () => {
               triggerAdd={triggerFileInput}
               fileInputRef={fileInputRef}
               disabled={isPending}
+              isOnline={isOnline}
             />
 
             {/* 话题输入 */}

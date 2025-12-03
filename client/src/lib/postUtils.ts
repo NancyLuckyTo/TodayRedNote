@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import axios from 'axios'
 import { IMAGE_RATIO, IMAGE_QUALITY } from '@today-red-note/types'
-import type { IPost, ImageRatio } from '@today-red-note/types'
+import type { IPost, ImageRatio, ImageQuality } from '@today-red-note/types'
 import type { SelectedImage } from '@/hooks/useImageSelection'
 import { compressImages } from '@/lib/imageUtils'
 import api from '@/lib/api'
@@ -106,17 +106,15 @@ export const parseTags = (tagsStr?: string): string[] => {
 
 /** 批量上传图片：压缩 -> 获取预签名 URL -> 上传到 Aliyun OSS */
 export const uploadImages = async (
-  images: SelectedImage[]
+  images: SelectedImage[],
+  qualityLevel: ImageQuality = IMAGE_QUALITY.PREVIEW
 ): Promise<UploadedImage[]> => {
   if (images.length === 0) return []
 
   try {
     // 压缩图片
     const originalFiles = images.map(img => img.file)
-    const compressedFiles = await compressImages(
-      originalFiles,
-      IMAGE_QUALITY.PREVIEW
-    )
+    const compressedFiles = await compressImages(originalFiles, qualityLevel)
 
     // 计算压缩后尺寸
     const compressedImagesWithDims = compressedFiles.map((file, idx) => {

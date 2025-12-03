@@ -92,3 +92,21 @@ export const compressImages = async (
 ): Promise<File[]> => {
   return Promise.all(files.map(file => compressImage(file, qualityLevel)))
 }
+
+/**
+ * 生成 OSS 图片缩略图 URL
+ * @param url 原始图片 URL
+ * @param width 缩略图宽度，默认使用 DETAIL 配置
+ * @returns 缩略图 URL
+ */
+export const getThumbnailUrl = (
+  url: string,
+  width: number = IMAGE_QUALITY_CONFIG[IMAGE_QUALITY.DETAIL].width
+): string => {
+  if (!url) return url
+  // 如果已经有处理参数，直接返回
+  if (url.includes('x-oss-process=')) return url
+  // 添加 OSS 图片处理参数
+  const separator = url.includes('?') ? '&' : '?'
+  return `${url}${separator}x-oss-process=image/resize,w_${width}`
+}
