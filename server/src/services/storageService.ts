@@ -15,7 +15,13 @@ export function getOssClient() {
     throw new Error('Missing ALI_OSS_* environment variables')
   }
 
-  client = new OSS({ region, accessKeyId, accessKeySecret, bucket })
+  client = new OSS({
+    region,
+    accessKeyId,
+    accessKeySecret,
+    bucket,
+    secure: true,
+  })
   return client
 }
 
