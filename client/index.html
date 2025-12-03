@@ -216,13 +216,6 @@
         </nav>
       </div>
     </div>
-    <!-- API 数据预取：在 JS 解析前就开始请求首屏数据-->
-    <script>
-      // 预取首屏帖子数据，存储到 window 对象供 React 使用
-      window.__PREFETCH_POSTS__ = fetch('/api/posts?limit=12')
-        .then(res => res.json())
-        .catch(() => null)
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
