@@ -8,7 +8,7 @@ import { useEffect, lazy, Suspense } from 'react'
 import BottomNav from './components/BottomNav'
 import HomePage from './pages/HomePage' // 首页保持同步加载，优化 LCP
 import PrivateRoute from './components/PrivateRoute'
-import { useAuthStore } from './store/auth'
+import { useAuthStore } from './stores/auth'
 import { ToastProvider } from '@/components/ui/toast'
 import { Spinner } from '@/components/ui/spinner'
 

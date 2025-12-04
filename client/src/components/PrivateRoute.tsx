@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import type { PropsWithChildren } from 'react'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/stores/auth'
 
 const PrivateRoute = ({ children }: PropsWithChildren) => {
   const location = useLocation()

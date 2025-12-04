@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Plus } from 'lucide-react'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/stores/auth'
 
 const BottomNav = () => {
   const location = useLocation()

@@ -21,7 +21,7 @@ import {
 import { getDefaultAvatar } from '@/lib/avatarUtils'
 import type { IPost } from '@today-red-note/types'
 import { RichTextEditor } from '@/components/create-post/RichTextEditor'
-import { useAuthStore } from '@/store/auth'
+import { useAuthStore } from '@/stores/auth'
 import { useDeletePost } from '@/hooks/useDeletePost'
 
 interface PostDetailItemProps {

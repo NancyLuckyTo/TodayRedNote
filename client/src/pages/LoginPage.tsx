@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '@/lib/api'
-import { useAuthStore } from '@/store/auth'
-import { useHomeStore } from '@/store/homeStore'
+import { useAuthStore } from '@/stores/auth'
+import { useHomeStore } from '@/stores/homeStore'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   Card,
