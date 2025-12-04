@@ -10,7 +10,7 @@ import type { IPost } from '@today-red-note/types'
 import type { PostsResponse } from '@/types/posts'
 import { PostDetailItem } from '@/components/PostDetailItem'
 
-const ROOT_MARGIN_VALUE = '1000px'
+const ROOT_MARGIN_VALUE = '1200px'
 
 export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>() // 获取 URL 参数
