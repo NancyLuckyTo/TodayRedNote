@@ -35,34 +35,37 @@ function Layout() {
     location.pathname === '/createPost'
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Suspense fallback={<PageLoading />}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/createPost"
-            element={
-              <PrivateRoute>
-                <PostEditorPage />
-              </PrivateRoute>
-            }
-          />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/post/:id" element={<PostDetailPage />} />
-          <Route
-            path="/editPost/:id"
-            element={
-              <PrivateRoute>
-                <PostEditorPage />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
-      </Suspense>
+    <div className="flex min-h-screen justify-center bg-gray-100">
+      {/* 手机端容器：限制最大宽度，模拟手机屏幕比例 */}
+      <div className="relative w-full max-w-md min-h-screen bg-gray-100 shadow-2xl">
+        <Suspense fallback={<PageLoading />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route
+              path="/createPost"
+              element={
+                <PrivateRoute>
+                  <PostEditorPage />
+                </PrivateRoute>
+              }
+            />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/post/:id" element={<PostDetailPage />} />
+            <Route
+              path="/editPost/:id"
+              element={
+                <PrivateRoute>
+                  <PostEditorPage />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </Suspense>
 
-      {!hideBottomNav && <BottomNav />}
-      <ToastProvider position="top-center" />
+        {!hideBottomNav && <BottomNav />}
+        <ToastProvider position="top-center" />
+      </div>
     </div>
   )
 }

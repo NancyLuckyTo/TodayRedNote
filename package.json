@@ -19,9 +19,12 @@
   "license": "ISC",
   "packageManager": "pnpm@10.20.0",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
+    "client/**/*.{ts,tsx,js,jsx}": [
       "prettier --write",
-      "eslint --fix --no-warn-ignored"
+      "eslint --fix --no-warn-ignored --config client/eslint.config.js"
+    ],
+    "server/**/*.{ts,tsx,js,jsx}": [
+      "prettier --write"
     ],
     "*.{json,css,scss,md}": [
       "prettier --write"

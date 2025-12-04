@@ -14,7 +14,7 @@ const BottomNav = () => {
   const isLoggedIn = useAuthStore(s => s.isAuthenticated)
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white z-10">
+    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white z-10">
       <div className="flex justify-around items-center py-2 px-4">
         {navItems.map(item => {
           const targetPath =
