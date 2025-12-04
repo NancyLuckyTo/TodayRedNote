@@ -59,7 +59,7 @@ export function PostDetailItem({ post }: PostDetailItemProps) {
   }
 
   return (
-    <div className="flex flex-col bg-background pb-4 mb-4 last:mb-0">
+    <div className="flex flex-col bg-background pb-2 mb-1 last:mb-0">
       {/* 作者信息 */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3">

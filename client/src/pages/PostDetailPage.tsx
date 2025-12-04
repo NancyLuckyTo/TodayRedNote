@@ -204,7 +204,7 @@ export default function PostDetailPage() {
       </header>
 
       {/* 笔记列表容器 */}
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-gray-100">
         {posts.map(post => (
           <PostDetailItem key={post._id} post={post} />
         ))}
