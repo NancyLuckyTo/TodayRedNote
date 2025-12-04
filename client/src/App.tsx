@@ -37,7 +37,7 @@ function Layout() {
   return (
     <div className="flex min-h-screen justify-center bg-gray-100">
       {/* 手机端容器：限制最大宽度，模拟手机屏幕比例 */}
-      <div className="relative w-full max-w-md min-h-screen bg-gray-100 shadow-2xl">
+      <div className="relative w-full max-w-md min-h-screen bg-gray-100">
         <Suspense fallback={<PageLoading />}>
           <Routes>
             <Route path="/" element={<HomePage />} />

@@ -27,10 +27,21 @@
         margin: 0;
         background: #f3f4f6;
       }
+      /* 外层容器：居中布局 */
+      .skeleton-wrapper {
+        display: flex;
+        min-height: 100vh;
+        justify-content: center;
+        background: #f3f4f6;
+      }
+      /* 手机端容器：限制最大宽度 */
       .skeleton-container {
+        position: relative;
+        width: 100%;
+        max-width: 28rem; /* max-w-md = 448px */
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        min-height: 100vh;
         overflow: hidden;
         background: #f3f4f6;
       }
@@ -99,9 +110,11 @@
       }
       .skeleton-bottom-nav {
         position: fixed;
-        left: 0;
-        right: 0;
         bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 28rem; /* max-w-md = 448px */
         background: #ffffff;
         z-index: 10;
       }
@@ -155,65 +168,67 @@
   <body>
     <div id="root">
       <!-- 首屏骨架屏，在 React 挂载前显示 -->
-      <div class="skeleton-container">
-        <div class="skeleton-header">
-          <span class="skeleton-header-title">发现</span>
-        </div>
-        <div class="skeleton-content">
-          <div class="skeleton-grid">
-            <!-- 左列 -->
-            <div class="skeleton-column">
-              <div class="skeleton-card">
-                <div class="skeleton-image"></div>
-                <div class="skeleton-text">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line"></div>
+      <div class="skeleton-wrapper">
+        <div class="skeleton-container">
+          <div class="skeleton-header">
+            <span class="skeleton-header-title">发现</span>
+          </div>
+          <div class="skeleton-content">
+            <div class="skeleton-grid">
+              <!-- 左列 -->
+              <div class="skeleton-column">
+                <div class="skeleton-card">
+                  <div class="skeleton-image"></div>
+                  <div class="skeleton-text">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                  </div>
+                </div>
+                <div class="skeleton-card">
+                  <div class="skeleton-image landscape"></div>
+                  <div class="skeleton-text">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                  </div>
                 </div>
               </div>
-              <div class="skeleton-card">
-                <div class="skeleton-image landscape"></div>
-                <div class="skeleton-text">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line"></div>
+              <!-- 右列 -->
+              <div class="skeleton-column">
+                <div class="skeleton-card">
+                  <div class="skeleton-image landscape"></div>
+                  <div class="skeleton-text">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                  </div>
                 </div>
-              </div>
-            </div>
-            <!-- 右列 -->
-            <div class="skeleton-column">
-              <div class="skeleton-card">
-                <div class="skeleton-image landscape"></div>
-                <div class="skeleton-text">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line"></div>
-                </div>
-              </div>
-              <div class="skeleton-card">
-                <div class="skeleton-image"></div>
-                <div class="skeleton-text">
-                  <div class="skeleton-line"></div>
-                  <div class="skeleton-line"></div>
+                <div class="skeleton-card">
+                  <div class="skeleton-image"></div>
+                  <div class="skeleton-text">
+                    <div class="skeleton-line"></div>
+                    <div class="skeleton-line"></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <nav class="skeleton-bottom-nav">
-          <div class="skeleton-bottom-nav-inner">
-            <div
-              class="skeleton-bottom-nav-item skeleton-bottom-nav-item-active"
-            >
-              <span class="skeleton-bottom-nav-label">首页</span>
-            </div>
-            <div class="skeleton-bottom-nav-item">
-              <div class="skeleton-bottom-nav-create">
-                <span class="skeleton-bottom-nav-plus">+</span>
+          <nav class="skeleton-bottom-nav">
+            <div class="skeleton-bottom-nav-inner">
+              <div
+                class="skeleton-bottom-nav-item skeleton-bottom-nav-item-active"
+              >
+                <span class="skeleton-bottom-nav-label">首页</span>
+              </div>
+              <div class="skeleton-bottom-nav-item">
+                <div class="skeleton-bottom-nav-create">
+                  <span class="skeleton-bottom-nav-plus">+</span>
+                </div>
+              </div>
+              <div class="skeleton-bottom-nav-item">
+                <span class="skeleton-bottom-nav-label">我</span>
               </div>
             </div>
-            <div class="skeleton-bottom-nav-item">
-              <span class="skeleton-bottom-nav-label">我</span>
-            </div>
-          </div>
-        </nav>
+          </nav>
+        </div>
       </div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
