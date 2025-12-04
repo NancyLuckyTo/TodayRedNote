@@ -1,7 +1,7 @@
 {
   "name": "@today-red-note/types",
   "version": "1.0.0",
-  "description": "Shared types for TRN app",
+  "description": "Shared types for Today Red Note app",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,6 +23,5 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.20.0"
+  "license": "ISC"
 }

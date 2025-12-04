@@ -4,9 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "dev": "tsx watch src/bin/www.ts",
-    "start": "node dist/bin/www.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/bin/www.js",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@today-red-note/types": "workspace:*",

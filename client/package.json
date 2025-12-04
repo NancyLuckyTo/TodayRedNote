@@ -6,10 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "pnpm -C ../packages/types run build && tsc -b && vite build",
+    "clean": "rm -rf dist",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
     "preview": "vite preview"
   },
   "dependencies": {
