@@ -10,7 +10,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { HomePageSkeleton } from '@/components/PostCardSkeleton'
 import { useHomeStore } from '@/stores/homeStore'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
-import { ROOT_MARGIN_VALUE } from '@/constants/post'
+import { useDebugRootMargin } from '@/hooks/useDebugRootMargin'
 import { FETCH_LIMIT, PRIORITY_LIMIT } from '@today-red-note/types'
 
 // 声明 window 上的预取数据类型
@@ -21,6 +21,9 @@ declare global {
 }
 
 const HomePage = () => {
+  // 开发环境可通过 window.__setRootMargin('0px 0px 200px 0px') 实时调试
+  const rootMargin = useDebugRootMargin()
+
   const {
     posts,
     nextCursor,
@@ -241,16 +244,16 @@ const HomePage = () => {
       {
         root: root || null,
         threshold: 0.1,
-        rootMargin: ROOT_MARGIN_VALUE,
+        rootMargin,
       }
     )
 
     observer.observe(element)
     return () => observer.disconnect() // 组件卸载或依赖变化时销毁监听
-  }, [hasNextPage, isLoadingMore, handleLoadMore])
+  }, [hasNextPage, isLoadingMore, handleLoadMore, rootMargin])
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-100">
+    <div className="flex flex-col h-dvh overflow-hidden bg-gray-100">
       {/* 顶部导航栏 */}
       <div className="flex-none z-10 bg-background border-b px-4 py-2">
         <div className="flex items-center justify-center">

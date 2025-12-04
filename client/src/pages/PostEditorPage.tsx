@@ -302,7 +302,7 @@ const PostEditorPage = () => {
   // 编辑模式下的加载状态
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-dvh items-center justify-center">
         <Spinner />
       </div>
     )

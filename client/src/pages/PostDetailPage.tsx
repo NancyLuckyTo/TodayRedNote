@@ -153,7 +153,7 @@ export default function PostDetailPage() {
   // 加载中
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-dvh items-center justify-center">
         <Spinner />
       </div>
     )
@@ -162,7 +162,7 @@ export default function PostDetailPage() {
   // 加载失败
   if (error || posts.length === 0) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <div className="flex h-dvh flex-col items-center justify-center gap-4">
         <p className="text-destructive">{error || 'Post not found'}</p>
         <Button variant="outline" onClick={() => navigate(-1)}>
           返回
