@@ -297,21 +297,32 @@ const PostEditorPage = () => {
       // 启动发布进度状态
       startPublishing(coverImage)
 
-      // 清除草稿并重置状态
+      // 清除草稿和编辑器内容（但不 revoke 图片 URL，等上传完成后再清理）
       clearDraft()
-      resetImages()
       setEditorContent('')
+
+      // 保存当前图片引用，用于后续上传
+      const imagesToUpload = [...newImages]
+      const existingToUpload = [...existingImages]
 
       // 立即跳转到首页
       navigate('/')
 
       // 使用 setTimeout 确保跳转后再开始发布
       setTimeout(() => {
-        createPost({
-          data: postData,
-          images: newImages,
-          existingImages,
-        })
+        createPost(
+          {
+            data: postData,
+            images: imagesToUpload,
+            existingImages: existingToUpload,
+          },
+          {
+            onSettled: () => {
+              // 上传完成后（无论成功或失败）才 revoke blob URLs
+              resetImages()
+            },
+          }
+        )
       }, 100)
     }
   }
