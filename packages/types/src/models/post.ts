@@ -27,4 +27,5 @@ export interface IPost {
   likesCount: number
   coverRatio: ImageRatio
   isTextOnly?: boolean
+  commentCount: number
 }

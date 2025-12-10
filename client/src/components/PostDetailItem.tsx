@@ -45,7 +45,7 @@ export function PostDetailItem({
   post,
   defaultCommentsOpen = false,
 }: PostDetailItemProps) {
-  const { author, body, images, likesCount = 0, createdAt } = post
+  const { author, body, images, likesCount = 0, createdAt, commentCount } = post
   const navigate = useNavigate()
   const location = useLocation()
   const user = useAuthStore(state => state.user)
@@ -56,7 +56,7 @@ export function PostDetailItem({
 
   const { data: comments = [], isLoading: commentsLoading } = usePostComments(
     post._id,
-    true
+    commentsOpen
   )
   const { mutate: addComment, isPending: isAdding } = useAddComment(post._id)
 
@@ -253,7 +253,7 @@ export function PostDetailItem({
           onClick={() => setCommentsOpen(prev => !prev)}
         >
           <MessageCircleMore className="h-5 w-5" />
-          <span className="text-xs">{comments.length}</span>
+          <span className="text-xs">{commentCount}</span>
         </div>
 
         <div className="flex flex-1 items-center justify-center gap-1">

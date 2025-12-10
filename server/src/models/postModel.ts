@@ -9,6 +9,7 @@ export interface IPost extends Document {
   tags: Types.ObjectId[] // 标签列表
   topic?: Types.ObjectId // 主要话题
   topics?: Types.ObjectId[] // 相关话题列表
+  commentCount: number
   createdAt: Date
   updatedAt: Date
 }
@@ -36,6 +37,7 @@ const PostSchema: Schema<IPost> = new Schema<IPost>(
     tags: [{ type: Schema.Types.ObjectId, ref: 'Tag', index: true }],
     topic: { type: Schema.Types.ObjectId, ref: 'Topic' },
     topics: [{ type: Schema.Types.ObjectId, ref: 'Topic' }],
+    commentCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 )

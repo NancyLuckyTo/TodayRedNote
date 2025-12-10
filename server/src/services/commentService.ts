@@ -29,6 +29,8 @@ class CommentService {
       content: trimmed,
     })
 
+    await Post.updateOne({ _id: postId }, { $inc: { commentCount: 1 } })
+
     await comment.populate('author', 'username avatar')
 
     return comment.toObject()
