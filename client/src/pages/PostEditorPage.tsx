@@ -102,12 +102,8 @@ const PostEditorPage = () => {
 
   // 创建/更新 mutation
   const { mutate: createPost, isPending: isCreating } = useCreatePost({
-    onSuccess: () => {
-      // 发布成功后清除草稿
-      clearDraft()
-      resetImages()
-      setEditorContent('')
-    },
+    // 新建模式下，清除草稿的逻辑在 onSubmit 中跳转前已执行
+    // 这里不再重复调用，避免触发已删除草稿的保存错误
   })
 
   const { mutate: updatePost, isPending: isUpdating } = useUpdatePost({
